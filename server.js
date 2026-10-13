@@ -9,6 +9,11 @@ const io = new Server(server);
 // Public klasörünü dışarıya açıyoruz
 app.use(express.static('public'));
 
+// İŞTE EKSİK OLAN KRAL KOD BURASI:
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
+});
+
 io.on('connection', (socket) => {
     console.log('Project TR hattına bağlandılar 🚗');
 
@@ -21,7 +26,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// Render'ın vereceği portu dinle, yoksa yerelde 3000 kullan
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Sunucu ayakta! Port: ${PORT}`);
