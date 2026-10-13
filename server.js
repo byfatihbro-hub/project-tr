@@ -6,12 +6,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Public klasörünü dışarıya açıyoruz
-app.use(express.static('public'));
+// Dosyaları doğrudan ana klasörden sunuyoruz
+app.use(express.static(__dirname));
 
-// İŞTE EKSİK OLAN KRAL KOD BURASI:
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/public/index.html');
+    res.sendFile(__dirname + '/index.html');
 });
 
 io.on('connection', (socket) => {
