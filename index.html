@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fizik 11 - Çalışma Notları</title>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #1a73e8 0%, #00b4d8 50%, #90e0ef 100%); 
+            color: #fff; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            height: 90vh; 
+        }
+        .hidden { display: none !important; }
+        .glass-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        #lockScreen { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            gap: 15px; 
+        }
+        #lockScreen input, #lockScreen button { 
+            padding: 12px; 
+            font-size: 16px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.5); 
+            background: rgba(0, 0, 0, 0.3); 
+            color: #fff; 
+            width: 220px; 
+            text-align: center; 
+            outline: none;
+        }
+        .aero-btn { 
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+            border: 1px solid #ffffff; 
+            color: #fff;
+            font-weight: bold; 
+            cursor: pointer; 
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2);
+            text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+        }
+        #chatContainer { display: flex; flex-direction: column; flex: 1; }
+        #chat { flex: 1; border-radius: 10px; padding: 15px; overflow-y: auto; margin-bottom: 15px; }
+        .message { margin-bottom: 10px; background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 80%; }
+        .form-group { display: flex; gap: 10px; }
+        input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
+        #nameInput { width: 130px; }
+        #messageInput { flex: 1; }
+    </style>
+</head>
+<body>
+    <div id="lockScreen" class="glass-box" style="position: absolute; width: 80%; max-width: 400px; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+        <h2>📚 Fizik 11 - Ünite 2 Notları</h2>
+        <input id="pinInput" type="password" placeholder="Şifre..." />
+        <button class="aero-btn" onclick="checkPin()">Giriş Yap</button>
+        <p id="errorMsg" style="color: #ffdddd; display: none;">Hatalı şifre!</p>
+    </div>
+    <div id="chatContainer" class="hidden">
+        <h2>🌐 Project TR // Aero Chat</h2>
+        <div id="chat" class="glass-box"></div>
+        <form id="form" class="form-group">
+            <input id="nameInput" type="text" placeholder="İsmin..." required autocomplete="off" />
+            <input id="messageInput" type="text" placeholder="Mesajını yaz..." required autocomplete="off" />
+            <button class="aero-btn" type="submit">Gönder</button>
+        </form>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const SECRET_PIN = "1992";
+        function checkPin() {
+            if (document.getElementById('pinInput').value === SECRET_PIN) {
+                document.getElementById('lockScreen').classList.add('hidden');
+                document.getElementById('chatContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        }
+        const socket = io();
+        const form = document.getElementById('form');
+        const nameInput = document.getElementById('nameInput');
+        const messageInput = document.getElementById('messageInput');
+        const chat = document.getElementById('chat');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (messageInput.value && nameInput.value) {
+                socket.emit('chat message', { name: nameInput.value, text: messageInput.value });
+                messageInput.value = '';
+            }
+        });
+        socket.on('chat message', function(msg) {
+            const item = document.createElement('div');
+            item.className = 'message';
+            item.innerHTML = `<strong>${msg.name}:</strong> ${msg.text}`;
+            chat.appendChild(item);
+            chat.scrollTop = chat.scrollHeight;
+        });
+    </script>
+</body>
+</html>
