@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// MongoDB Atlas Bağlantısı (Yeni fatih kullanıcısı ile güncellendi)
+// MongoDB Atlas Bağlantısı
 mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
     .then(() => console.log('MongoDB Atlas bağlantısı başarılı! 🟢'))
     .catch(err => console.error('MongoDB bağlantı hatası:', err));
@@ -46,6 +46,7 @@ io.on('connection', async (socket) => {
     });
 });
 
-server.listen(3000, () => {
-    console.log('Sunucu ayakta! http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Sunucu ayakta! Port: ${PORT}`);
 });
