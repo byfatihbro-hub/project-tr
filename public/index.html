@@ -20,154 +20,60 @@
             align-items: center;
         }
 
-        .app-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-            background: transparent;
-        }
+        .app-container { width: 100%; height: 100%; display: flex; flex-direction: column; padding: 10px; background: transparent; position: relative; }
 
         @media (min-width: 768px) {
-            .app-container {
-                max-width: 850px;
-                max-height: 85vh;
-                height: 85vh;
-                border-radius: 16px;
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                background: rgba(18, 18, 18, 0.4);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-                padding: 20px;
-            }
+            .app-container { max-width: 850px; max-height: 85vh; height: 85vh; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(18, 18, 18, 0.4); backdrop-filter: blur(16px); padding: 20px; }
         }
 
         .hidden { display: none !important; }
-        .glass-box {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37);
-            border-radius: 12px;
-            padding: 15px;
-        }
-        .center-screen {
-            position: absolute;
-            width: 90%;
-            max-width: 400px;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            text-align: center;
-            z-index: 100;
-        }
-        .center-screen input, .center-screen button { 
-            padding: 12px; 
-            font-size: 16px; 
-            border-radius: 8px; 
-            border: 1px solid rgba(255,255,255,0.5); 
-            background: rgba(0, 0, 0, 0.3); 
-            color: #fff; 
-            width: 220px; 
-            text-align: center; 
-            outline: none;
-        }
-        .aero-btn { 
-            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
-            border: 1px solid #ffffff; 
-            color: #fff;
-            font-weight: bold; 
-            cursor: pointer; 
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2);
-            text-shadow: 0 1px 1px rgba(0,0,0,0.3);
-        }
+        .glass-box { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37); border-radius: 12px; padding: 15px; }
+        .center-screen { position: absolute; width: 90%; max-width: 400px; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; text-align: center; z-index: 100; }
+        .center-screen input, .center-screen button { padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.5); background: rgba(0, 0, 0, 0.3); color: #fff; width: 220px; text-align: center; outline: none; }
+        
+        .aero-btn { background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); border: 1px solid #ffffff; color: #fff; font-weight: bold; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2); text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
         .aero-btn:hover { background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%); }
         
-        #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; }
-        .chat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 0 5px;
-        }
+        #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; position: relative; }
+        
+        .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 5px; cursor: pointer; border-radius: 8px; transition: background 0.2s; }
+        .chat-header:hover { background: rgba(255,255,255,0.1); }
         .header-buttons { display: flex; gap: 6px; }
-        #chat { flex: 1; border-radius: 10px; padding: 12px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
-        .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 80%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); }
+        
+        #chat { flex: 1; border-radius: 10px; padding: 12px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+        
+        /* Modern Mesaj Görünümü (WhatsApp/Discord Tarzı) */
+        .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 85%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); }
         .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; box-shadow: 0 0 10px rgba(255,193,7,0.4); }
-        .message span.username { font-weight: bold; color: #ffeb3b; margin-right: 8px; }
-        .message span.time { font-size: 11px; color: rgba(255,255,255,0.7); margin-left: 10px; float: right; margin-top: 3px; }
+        .message span.username { font-weight: bold; color: #ffeb3b; font-size: 14px; }
+        .message span.time { font-size: 10px; color: rgba(255,255,255,0.7); }
         .mention-tag { background: rgba(255, 235, 59, 0.4); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         
         .form-group { position: relative; display: flex; gap: 8px; }
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
         #messageInput { flex: 1; }
 
-        /* WhatsApp Tarzı @ Menüsü */
-        .mention-menu {
-            position: absolute;
-            bottom: 100%;
-            left: 0;
-            margin-bottom: 8px;
-            width: 250px;
-            background: #2a2f32;
-            border-radius: 8px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.4);
-            display: none;
-            flex-direction: column;
-            z-index: 1000;
-            overflow-y: auto;
-            max-height: 200px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .mention-item {
-            padding: 10px 15px;
-            color: #fff;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 14px;
-        }
+        .mention-menu { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 250px; background: #2a2f32; border-radius: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.4); display: none; flex-direction: column; z-index: 1000; overflow-y: auto; max-height: 200px; border: 1px solid rgba(255,255,255,0.1); }
+        .mention-item { padding: 10px 15px; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
         .mention-item:hover { background: #3b4043; }
-        .mention-avatar {
-            width: 32px;
-            height: 32px;
-            background: #00b4d8;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #fff;
-        }
 
-        .action-btn {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.4);
-            color: #fff;
-            padding: 6px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-        }
+        .action-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .action-btn.active { background: #4facfe; border-color: #fff; }
+
+        /* Grup Bilgisi Ekranı Modal */
+        #groupInfoOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .group-info-modal { background: rgba(25, 30, 40, 0.95); width: 90%; max-width: 350px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); max-height: 85vh; overflow-y: auto; position: relative; }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 24px; cursor: pointer; transition: color 0.2s; }
+        .close-btn:hover { color: #fff; }
+        .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .admin-badge { background: #ff4757; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
+        .make-admin-btn { background: #4facfe; border: none; color: white; font-size: 10px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="app-container">
 
-        <!-- 1. Şifre Kilit Ekranı -->
         <div id="lockScreen" class="glass-box center-screen">
             <h2>📚 Fizik 11 - Ünite 2 Notları</h2>
             <input id="pinInput" type="password" placeholder="Şifre..." />
@@ -175,7 +81,6 @@
             <p id="errorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;">Hatalı şifre!</p>
         </div>
         
-        <!-- 2. Nickname Seçim Ekranı -->
         <div id="nicknameScreen" class="glass-box center-screen hidden">
             <h2>🚗 Project TR // Nickname</h2>
             <p style="font-size: 13px; margin: 0; color: rgba(255,255,255,0.9);">Bu cihaz için adını belirle (2 hafta değiştiremezsin):</p>
@@ -184,24 +89,59 @@
             <p id="nickErrorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;"></p>
         </div>
 
-        <!-- 3. Asıl Sohbet Ekranı -->
         <div id="chatContainer" class="hidden">
-            <div class="chat-header">
-                <h2 style="margin: 0; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">🌐 Project TR (<span id="currentUserDisplay" style="color: #ffeb3b;"></span>)</h2>
-                <div class="header-buttons">
-                    <button id="changeNickBtn" class="action-btn" onclick="requestChangeNick()" title="2 haftada bir değiştirilebilir">⚙️ Nick Değiştir</button>
-                    <button id="notifBtn" class="action-btn" onclick="toggleNotifications()">🔔 Bildirim</button>
+            <!-- Tıklanabilir Grup Başlığı -->
+            <div class="chat-header" onclick="openGroupInfo()">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img id="headerGroupIcon" src="" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1px solid #fff;">
+                    <div>
+                        <h2 style="margin: 0; font-size: 16px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Project TR</h2>
+                        <span style="font-size: 11px; color: #ddd;" id="headerUserCount">Sohbeti görmek için tıkla</span>
+                    </div>
+                </div>
+                <div class="header-buttons" onclick="event.stopPropagation();">
+                    <button id="notifBtn" class="action-btn" onclick="toggleNotifications()">🔔</button>
                 </div>
             </div>
             
             <div id="chat" class="glass-box"></div>
             
             <form id="form" class="form-group">
-                <!-- WhatsApp Tarzı @ Menüsü -->
                 <div id="mentionDropdown" class="mention-menu"></div>
                 <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
                 <button class="aero-btn" type="submit">Gönder</button>
             </form>
+        </div>
+
+        <!-- YENİ: GRUP VE KİŞİSEL BİLGİ EKRANI -->
+        <div id="groupInfoOverlay" class="hidden">
+            <div class="group-info-modal">
+                <button class="close-btn" onclick="closeGroupInfo()">×</button>
+                
+                <img id="modalGroupIcon" src="" style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 10px; display: block; object-fit: cover; border: 3px solid #4facfe;">
+                <h2 style="text-align: center; margin: 0 0 5px 0;">Project TR</h2>
+                <p style="text-align: center; font-size: 12px; color: #aaa; margin: 0 0 15px 0;">Senin Nickin: <span id="currentUserDisplay" style="color: #ffeb3b;"></span></p>
+
+                <!-- 1. Kişisel Profil Fotoğrafı Güncelleme (Herkes Girebilir) -->
+                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="font-size: 11px; margin: 0 0 5px 0; color: #ffeb3b; font-weight: bold;">👤 KİŞİSEL PROFİL FOTOĞRAFIN</p>
+                    <input id="myAvatarUrl" type="text" placeholder="Fotoğraf URL'si (İnternetten link yapıştır)" style="width: 100%; padding: 8px; font-size: 12px; margin-bottom: 5px; border-radius: 4px;">
+                    <button class="aero-btn" onclick="updateMyAvatar()" style="width: 100%; padding: 6px; font-size: 12px; border-radius: 4px;">Fotoğrafımı Güncelle</button>
+                    
+                    <button onclick="requestChangeNick()" style="width: 100%; margin-top: 5px; padding: 6px; font-size: 11px; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #aaa; cursor: pointer;">Nickimi Değiştir (2 Haftada Bir)</button>
+                </div>
+
+                <!-- 2. Admin Kontrolleri (Sadece yöneticiler görebilir) -->
+                <div id="adminControls" class="hidden" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #4facfe;">
+                    <p style="font-size: 11px; margin: 0 0 5px 0; color: #4facfe; font-weight: bold;">👑 GRUP YÖNETİCİ PANELİ</p>
+                    <input id="newIconUrl" type="text" placeholder="Yeni Grup Fotoğrafı URL'si" style="width: 100%; padding: 8px; font-size: 12px; margin-bottom: 5px; border-radius: 4px;">
+                    <button class="aero-btn" onclick="updateGroupIcon()" style="width: 100%; padding: 6px; font-size: 12px; border-radius: 4px;">Grup Fotoğrafını Değiştir</button>
+                </div>
+
+                <h3 style="margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">Grup Üyeleri (<span id="userCount">0</span>)</h3>
+                
+                <div id="participantsList" style="display: flex; flex-direction: column; gap: 5px;"></div>
+            </div>
         </div>
 
     </div>
@@ -210,15 +150,16 @@
     <script>
         const SECRET_PIN = "1992";
         let myUsername = '';
+        let myAvatar = localStorage.getItem('project_tr_avatar') || '';
         let notificationsEnabled = false;
-        let allKnownUsers = new Set(); // Geçmişteki ve aktif tüm kullanıcıları burada tutuyoruz
+        let allKnownUsers = new Set();
+        let knownProfiles = {}; // Kimin hangi fotoğrafı var sözlüğü
+        let currentGroupSettings = { icon: '', admins: [] };
+        
         const socket = io();
-
-        // 1. Google Sunucularından Çekilen Garantili Sesler
         const standardSound = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
         const mentionSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
 
-        // Tarayıcının ses engelini kırmak için butona basıldığında sesleri gizlice oynatıp durduruyoruz
         function unlockAudio() {
             standardSound.play().then(() => { standardSound.pause(); standardSound.currentTime = 0; }).catch(()=>{});
             mentionSound.play().then(() => { mentionSound.pause(); mentionSound.currentTime = 0; }).catch(()=>{});
@@ -226,19 +167,109 @@
 
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
-                const chat = document.getElementById('chat');
-                chat.scrollTop = chat.scrollHeight;
+                document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
             });
         }
 
+        // FOTOĞRAF OLUŞTURUCU (Resim yoksa ismin baş harfini yuvarlak yapar)
+        function getAvatarHtml(user, size = 32) {
+            const avatarUrl = knownProfiles[user];
+            if (avatarUrl) {
+                return `<img src="${escapeHtml(avatarUrl)}" style="width: ${size}px; height: ${size}px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">`;
+            } else {
+                return `<div style="width: ${size}px; height: ${size}px; border-radius: 50%; background: #00b4d8; color: #fff; display: flex; align-items: center; justify-content: center; font-size: ${size/2}px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">${user.charAt(0).toUpperCase()}</div>`;
+            }
+        }
+
+        // --- GRUP VE KİŞİSEL PROFİL AYARLARI ---
+        socket.on('group_settings', (settings) => {
+            currentGroupSettings = settings;
+            document.getElementById('headerGroupIcon').src = settings.icon;
+            document.getElementById('modalGroupIcon').src = settings.icon;
+            if (!document.getElementById('groupInfoOverlay').classList.contains('hidden')) renderParticipants();
+        });
+
+        function openGroupInfo() {
+            document.getElementById('groupInfoOverlay').classList.remove('hidden');
+            document.getElementById('myAvatarUrl').value = localStorage.getItem('project_tr_avatar') || '';
+            
+            if (currentGroupSettings.admins.includes(myUsername)) {
+                document.getElementById('adminControls').classList.remove('hidden');
+            } else {
+                document.getElementById('adminControls').classList.add('hidden');
+            }
+            renderParticipants();
+        }
+
+        function closeGroupInfo() {
+            document.getElementById('groupInfoOverlay').classList.add('hidden');
+            document.getElementById('newIconUrl').value = '';
+        }
+
+        function updateMyAvatar() {
+            const url = document.getElementById('myAvatarUrl').value.trim();
+            localStorage.setItem('project_tr_avatar', url);
+            myAvatar = url;
+            knownProfiles[myUsername] = url;
+            socket.emit('update_avatar', url);
+            alert("Kişisel profil fotoğrafın güncellendi kanka!");
+            renderParticipants();
+        }
+
+        function updateGroupIcon() {
+            const url = document.getElementById('newIconUrl').value.trim();
+            if(url) {
+                socket.emit('change_group_icon', url);
+                document.getElementById('newIconUrl').value = '';
+            }
+        }
+
+        function makeAdmin(targetUser) {
+            if(confirm(`${targetUser} adlı kişiyi Yönetici yapmak istiyor musun?`)) {
+                socket.emit('make_admin', targetUser);
+            }
+        }
+
+        function renderParticipants() {
+            const listDiv = document.getElementById('participantsList');
+            listDiv.innerHTML = '';
+            
+            const usersArray = Array.from(allKnownUsers);
+            document.getElementById('userCount').textContent = usersArray.length;
+            document.getElementById('headerUserCount').textContent = `${usersArray.length} üye`;
+
+            usersArray.forEach(user => {
+                const isAdmin = currentGroupSettings.admins.includes(user);
+                const isMe = user === myUsername;
+                const amIAdmin = currentGroupSettings.admins.includes(myUsername);
+
+                const item = document.createElement('div');
+                item.className = 'participant-item';
+                
+                let html = `<div style="display: flex; align-items: center; gap: 10px;">
+                                ${getAvatarHtml(user, 28)}
+                                <span style="font-size: 14px;">${user} ${isMe ? '(Sen)' : ''}</span>
+                                ${isAdmin ? '<span class="admin-badge">Yönetici</span>' : ''}
+                            </div>`;
+                
+                if (amIAdmin && !isAdmin) {
+                    html += `<button class="make-admin-btn" onclick="makeAdmin('${user}')">Yönetici Yap</button>`;
+                }
+
+                item.innerHTML = html;
+                listDiv.appendChild(item);
+            });
+        }
+        // ------------------------------------
+
         function checkPin() {
             if (document.getElementById('pinInput').value === SECRET_PIN) {
-                unlockAudio(); // Ses kilidini kır
+                unlockAudio(); 
                 document.getElementById('lockScreen').classList.add('hidden');
                 
                 const savedUser = localStorage.getItem('project_tr_username');
                 if (savedUser) {
-                    socket.emit('set-username', savedUser, (response) => {
+                    socket.emit('set-username', { username: savedUser, avatar: myAvatar }, (response) => {
                         if (response.success) {
                             myUsername = savedUser;
                             document.getElementById('currentUserDisplay').textContent = myUsername;
@@ -260,7 +291,7 @@
         }
 
         function setNickname() {
-            unlockAudio(); // Ses kilidini kır
+            unlockAudio();
             const enteredName = document.getElementById('nicknameInput').value.trim();
             const nickErr = document.getElementById('nickErrorMsg');
             
@@ -270,7 +301,7 @@
                 return;
             }
 
-            socket.emit('set-username', enteredName, (response) => {
+            socket.emit('set-username', { username: enteredName, avatar: myAvatar }, (response) => {
                 if (response.success) {
                     myUsername = enteredName;
                     localStorage.setItem('project_tr_username', myUsername);
@@ -314,15 +345,15 @@
                 Notification.requestPermission().then(permission => {
                     if (permission === "granted") {
                         notificationsEnabled = true;
-                        btn.textContent = "🔕 Açık";
+                        btn.textContent = "🔕";
                         btn.classList.add('active');
                     } else {
-                        alert("Kanka tarayıcının adres çubuğundaki kilit (veya i) simgesine tıklayıp bildirimlere İZİN VER demen lazım, yoksa bildirim düşmez!");
+                        alert("Tarayıcının adres çubuğundaki kilit simgesine tıklayıp bildirimlere İZİN VER demen lazım!");
                     }
                 });
             } else {
                 notificationsEnabled = false;
-                btn.textContent = "🔔 Bildirim";
+                btn.textContent = "🔔";
                 btn.classList.remove('active');
             }
         }
@@ -335,16 +366,24 @@
         const chat = document.getElementById('chat');
         const mentionDropdown = document.getElementById('mentionDropdown');
 
-        // WHATSAPP TARZI @ ETİKETLEME MENÜSÜ MANTIĞI
         socket.on('init_messages', (messages) => {
             messages.forEach(msg => {
                 allKnownUsers.add(msg.user);
                 displayMessage(msg);
             });
+            document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} üye`;
         });
 
-        socket.on('active_users', (users) => {
-            users.forEach(u => allKnownUsers.add(u));
+        // Online kullanıcıların profil verilerini çekme
+        socket.on('active_users', (usersData) => {
+            usersData.forEach(u => {
+                allKnownUsers.add(u.username);
+                if(u.avatar) knownProfiles[u.username] = u.avatar;
+            });
+            document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} üye`;
+            if (!document.getElementById('groupInfoOverlay').classList.contains('hidden')) {
+                renderParticipants();
+            }
         });
 
         messageInput.addEventListener('input', function() {
@@ -352,7 +391,6 @@
             const cursorPosition = this.selectionStart;
             const textBeforeCursor = val.substring(0, cursorPosition);
             
-            // "@" işareti ve sonrasındaki harfleri yakala
             const match = textBeforeCursor.match(/(?:^|\s)@(\w*)$/);
 
             if (match) {
@@ -366,7 +404,7 @@
                     filteredUsers.forEach(user => {
                         const item = document.createElement('div');
                         item.className = 'mention-item';
-                        item.innerHTML = `<div class="mention-avatar">${user.charAt(0).toUpperCase()}</div><div>${user}</div>`;
+                        item.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">${getAvatarHtml(user, 26)} <div>${user}</div></div>`;
                         
                         item.onclick = function() {
                             const currentVal = messageInput.value;
@@ -388,10 +426,14 @@
             }
         });
 
-        // Menü dışına tıklanınca gizle
         document.addEventListener('click', (e) => {
             if (!mentionDropdown.contains(e.target) && e.target !== messageInput) {
                 mentionDropdown.style.display = 'none';
+            }
+            const overlay = document.getElementById('groupInfoOverlay');
+            const modal = document.querySelector('.group-info-modal');
+            if (e.target === overlay) {
+                closeGroupInfo();
             }
         });
 
@@ -404,45 +446,37 @@
             }
         });
 
-        // MESAJ GELDİĞİNDE: SES VE BİLDİRİM PATLATMA
         socket.on('chat message', function(msg) {
             allKnownUsers.add(msg.user);
+            if(msg.avatar) knownProfiles[msg.user] = msg.avatar; // Gelen mesajda avatar varsa listeye ekle
+            
+            document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} üye`;
             displayMessage(msg);
             
             if (msg.user !== myUsername) {
                 const isMentioned = myUsername && msg.text.includes(`@${myUsername}`);
                 
                 if (isMentioned) {
-                    // ETİKETLENDİN! Özel dikkat çekici sesi her türlü çal (Bildirim kapalı olsa bile)
                     mentionSound.currentTime = 0;
                     mentionSound.play().catch(()=>{});
-                    
-                    // Tarayıcı Bildirimi (Ekrana düşmesi için İZİN verilmiş olmalı)
                     try {
                         if ("Notification" in window && Notification.permission === "granted") {
-                            new Notification(`@${myUsername} seni etiketledi!`, {
-                                body: `${msg.user}: ${msg.text}`,
-                                icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
-                            });
+                            new Notification(`@${myUsername} seni etiketledi!`, { body: `${msg.user}: ${msg.text}`, icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png' });
                         }
                     } catch(e) {}
                 } else if (notificationsEnabled) {
-                    // Normal bildirim (Sadece "Bildirim" butonuna basılıysa)
                     standardSound.currentTime = 0;
                     standardSound.play().catch(()=>{});
-                    
                     try {
                         if ("Notification" in window && Notification.permission === "granted") {
-                            new Notification(`Yeni mesaj: ${msg.user}`, {
-                                body: msg.text,
-                                icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
-                            });
+                            new Notification(`Yeni mesaj: ${msg.user}`, { body: msg.text, icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png' });
                         }
                     } catch(e) {}
                 }
             }
         });
 
+        // MESAJIN EKRANA YAZILMA TASARIMI (WhatsApp Tarzı Profil Fotolu)
         function displayMessage(msg) {
             const item = document.createElement('div');
             item.className = 'message';
@@ -454,7 +488,19 @@
             }
 
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            item.innerHTML = `<span class="username">${msg.user}:</span> ${formattedText} <span class="time">${timeStr}</span>`;
+            
+            item.innerHTML = `
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    ${getAvatarHtml(msg.user, 35)}
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                            <span class="username" style="margin: 0;">${msg.user}</span>
+                            <span class="time" style="margin: 0;">${timeStr}</span>
+                        </div>
+                        <div style="line-height: 1.4; font-size: 15px;">${formattedText}</div>
+                    </div>
+                </div>
+            `;
             chat.appendChild(item);
             chat.scrollTop = chat.scrollHeight;
         }
