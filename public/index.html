@@ -27,6 +27,7 @@
             flex-direction: column;
             padding: 10px;
             background: transparent;
+            position: relative;
         }
 
         @media (min-width: 768px) {
@@ -91,7 +92,7 @@
         }
         .aero-btn:hover { background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%); }
         
-        #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; }
+        #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; position: relative; }
         .chat-header {
             display: flex;
             justify-content: space-between;
@@ -107,9 +108,38 @@
         .message span.time { font-size: 11px; color: rgba(255,255,255,0.7); margin-left: 10px; float: right; margin-top: 3px; }
         .mention-tag { background: rgba(255, 235, 59, 0.4); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         
+        .form-wrapper { position: relative; display: flex; flex-direction: column; }
         .form-group { display: flex; gap: 8px; }
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
         #messageInput { flex: 1; }
+
+        /* WhatsApp Tarzı Etiket Öneri Kutusu (Autocomplete Dropdown) */
+        #mentionDropdown {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            width: 250px;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 500;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+        .mention-item {
+            padding: 10px 15px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: background 0.2s;
+        }
+        .mention-item:hover {
+            background: rgba(79, 172, 254, 0.4);
+        }
 
         .action-btn {
             background: rgba(0,0,0,0.3);
@@ -153,11 +183,17 @@
                     <button id="notifBtn" class="action-btn" onclick="toggleNotifications()">🔔 Bildirim</button>
                 </div>
             </div>
+            
             <div id="chat" class="glass-box"></div>
-            <form id="form" class="form-group">
-                <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
-                <button class="aero-btn" type="submit">Gönder</button>
-            </form>
+            
+            <!-- Form ve WhatsApp Tarzı Etiket Öneri Kutusu -->
+            <div class="form-wrapper">
+                <div id="mentionDropdown"></div>
+                <form id="form" class="form-group">
+                    <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
+                    <button class="aero-btn" type="submit">Gönder</button>
+                </form>
+            </div>
         </div>
 
     </div>
@@ -167,7 +203,13 @@
         const SECRET_PIN = "1992";
         let myUsername = '';
         let notificationsEnabled = false;
+        let onlineUsers = [];
         const socket = io();
+
+        // Online kullanıcı listesini sunucudan al
+        socket.on('active_users', (users) => {
+            onlineUsers = users;
+        });
 
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
@@ -176,15 +218,15 @@
             });
         }
 
-        // Web Audio API ile Standart Bildirim Sesi (Yumuşak Çift Tonlu Zil)
+        // Web Audio API ile Standart Zil Sesi
         function playStandardSound() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
                 osc.connect(gain);
@@ -194,7 +236,7 @@
             } catch(e) {}
         }
 
-        // Web Audio API ile Farklı ve Dikkat Çekici Etiketleme (Mention) Sesi
+        // Web Audio API ile Dikkat Çekici Etiketleme (Mention) Sesi (Bildirimler kapalı olsa bile çalar)
         function playMentionSound() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -204,12 +246,12 @@
                     const gain = ctx.createGain();
                     osc.type = 'triangle';
                     osc.frequency.setValueAtTime(659.25 + (index * 220), now + delay);
-                    gain.gain.setValueAtTime(0.18, now + delay);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.1);
+                    gain.gain.setValueAtTime(0.25, now + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.12);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
                     osc.start(now + delay);
-                    osc.stop(now + delay + 0.1);
+                    osc.stop(now + delay + 0.12);
                 });
             } catch(e) {}
         }
@@ -314,6 +356,52 @@
         const form = document.getElementById('form');
         const messageInput = document.getElementById('messageInput');
         const chat = document.getElementById('chat');
+        const mentionDropdown = document.getElementById('mentionDropdown');
+
+        // WhatsApp Tarzı @ Autocomplete Mantığı
+        messageInput.addEventListener('input', function() {
+            const val = this.value;
+            const cursorPosition = this.selectionStart;
+            
+            // İmlecin olduğu yerde "@" var mı diye kontrol et
+            const textBeforeCursor = val.substring(0, cursorPosition);
+            const match = textBeforeCursor.match(/@(\w*)$/);
+
+            if (match) {
+                const query = match[1].toLowerCase();
+                const filteredUsers = onlineUsers.filter(u => u.toLowerCase().includes(query) && u !== myUsername);
+
+                if (filteredUsers.length > 0) {
+                    mentionDropdown.innerHTML = '';
+                    filteredUsers.forEach(user => {
+                        const item = document.createElement('div');
+                        item.className = 'mention-item';
+                        item.textContent = `@${user}`;
+                        item.onclick = function() {
+                            const currentVal = messageInput.value;
+                            const beforeAt = currentVal.substring(0, textBeforeCursor.lastIndexOf('@'));
+                            const afterCursor = currentVal.substring(cursorPosition);
+                            messageInput.value = `${beforeAt}@${user} ${afterCursor}`;
+                            mentionDropdown.style.display = 'none';
+                            messageInput.focus();
+                        };
+                        mentionDropdown.appendChild(item);
+                    });
+                    mentionDropdown.style.display = 'flex';
+                } else {
+                    mentionDropdown.style.display = 'none';
+                }
+            } else {
+                mentionDropdown.style.display = 'none';
+            }
+        });
+
+        // Input dışına tıklandığında veya boşluk basıldığında dropdown kapansın
+        document.addEventListener('click', (e) => {
+            if (!messageInput.contains(e.target) && !mentionDropdown.contains(e.target)) {
+                mentionDropdown.style.display = 'none';
+            }
+        });
 
         socket.on('init_messages', (messages) => {
             messages.forEach(msg => displayMessage(msg));
@@ -321,12 +409,14 @@
 
         form.addEventListener('submit', function(e) {
             e.preventDefault();
+            mentionDropdown.style.display = 'none';
             if (messageInput.value.trim() && myUsername) {
                 socket.emit('chat message', { user: myUsername, text: messageInput.value });
                 messageInput.value = '';
             }
         });
 
+        // Mesaj Geldiğinde Ses ve Bildirim Yönetimi
         socket.on('chat message', function(msg) {
             displayMessage(msg);
             
@@ -334,18 +424,29 @@
                 const isMentioned = myUsername && msg.text.includes(`@${myUsername}`);
                 
                 if (isMentioned) {
-                    // ETİKETLENDİ! Bildirimler kapalı olsa bile ÖZEL SES çal ve sistem bildirimi fırlat
+                    // ETİKETLENDİN! Bildirimler kapalı olsa bile ÖZEL SES çal ve sistem bildirimi fırlat
                     playMentionSound();
                     try {
-                        if ("Notification" in window && Notification.permission === "granted") {
-                            new Notification(`@${myUsername} seni etiketledi!`, {
-                                body: `${msg.user}: ${msg.text}`,
-                                icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
-                            });
+                        if ("Notification" in window) {
+                            if (Notification.permission === "granted") {
+                                new Notification(`@${myUsername} seni etiketledi!`, {
+                                    body: `${msg.user}: ${msg.text}`,
+                                    icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
+                                });
+                            } else if (Notification.permission !== "denied") {
+                                Notification.requestPermission().then(permission => {
+                                    if (permission === "granted") {
+                                        new Notification(`@${myUsername} seni etiketledi!`, {
+                                            body: `${msg.user}: ${msg.text}`,
+                                            icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
+                                        });
+                                    }
+                                });
+                            }
                         }
                     } catch(e) {}
                 } else if (notificationsEnabled) {
-                    // Normal bildirimler açıkse standart ses çal
+                    // Normal mesajlar (Bildirimler butonla açıldıysa)
                     playStandardSound();
                     try {
                         if ("Notification" in window && Notification.permission === "granted") {
