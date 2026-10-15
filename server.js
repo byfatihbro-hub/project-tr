@@ -8,16 +8,19 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Kullanıcı adı -> Socket ID eşlemesi
 const activeUsers = new Map();
 
-// Online kullanıcı listesini herkese gönderen yardımcı fonksiyon
+// GRUP AYARLARI VE YÖNETİCİ LİSTESİ
+let groupSettings = {
+    icon: 'https://cdn-icons-png.flaticon.com/512/882/882747.png', // Varsayılan grup resmi (araba filan)
+    admins: ['Fatih', 'fatih'] // Kurucu yönetici sensin kanka!
+};
+
 function broadcastActiveUsers() {
     const users = Array.from(activeUsers.keys());
     io.emit('active_users', users);
 }
 
-// MongoDB Atlas Bağlantısı
 mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
     .then(() => console.log('MongoDB Atlas bağlantısı başarılı! 🟢'))
     .catch(err => console.error('MongoDB bağlantı hatası:', err));
@@ -26,6 +29,9 @@ app.use(express.static('public'));
 
 io.on('connection', async (socket) => {
     console.log('Project TR hattına bağlandılar! 🚗');
+
+    // Giriş yapana güncel grup bilgilerini gönder
+    socket.emit('group_settings', groupSettings);
 
     socket.on('set-username', (username, callback) => {
         if (!username || username.trim() === '') {
@@ -53,11 +59,25 @@ io.on('connection', async (socket) => {
         socket.username = cleanUser;
         callback({ success: true });
         
-        // Listeyi güncelle
         broadcastActiveUsers();
     });
 
-    // 1. Geçmiş mesajları gönder
+    // Grup fotoğrafı değiştirme yetkisi (Sadece adminler)
+    socket.on('change_group_icon', (newUrl) => {
+        if (groupSettings.admins.includes(socket.username)) {
+            groupSettings.icon = newUrl;
+            io.emit('group_settings', groupSettings); // Herkese yeni resmi yolla
+        }
+    });
+
+    // Başkasını yönetici yapma yetkisi (Sadece adminler)
+    socket.on('make_admin', (targetUser) => {
+        if (groupSettings.admins.includes(socket.username) && !groupSettings.admins.includes(targetUser)) {
+            groupSettings.admins.push(targetUser);
+            io.emit('group_settings', groupSettings); // Herkese yeni admin listesini yolla
+        }
+    });
+
     try {
         const previousMessages = await Message.find().sort({ timestamp: 1 }).limit(50);
         socket.emit('init_messages', previousMessages);
@@ -65,7 +85,6 @@ io.on('connection', async (socket) => {
         console.error('Geçmiş mesajlar yüklenemedi:', err);
     }
 
-    // 2. Yeni mesajı kaydet ve dağıt
     socket.on('chat message', async (data) => {
         try {
             const newMessage = new Message({
@@ -73,7 +92,6 @@ io.on('connection', async (socket) => {
                 text: data.text
             });
             await newMessage.save();
-
             io.emit('chat message', newMessage);
         } catch (err) {
             console.error('Mesaj kaydedilemedi:', err);
@@ -85,8 +103,6 @@ io.on('connection', async (socket) => {
             activeUsers.delete(socket.username);
             console.log(`${socket.username} hattan düştü.`);
             broadcastActiveUsers();
-        } else {
-            console.log('Biri hattan düştü.');
         }
     });
 });
