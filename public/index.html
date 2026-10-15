@@ -25,15 +25,21 @@
             border-radius: 12px;
             padding: 20px;
         }
-        #lockScreen { 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            gap: 15px; 
+        .center-screen {
+            position: absolute;
+            width: 80%;
+            max-width: 400px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            text-align: center;
         }
-        #lockScreen input, #lockScreen button { 
+        .center-screen input, .center-screen button { 
             padding: 12px; 
             font-size: 16px; 
             border-radius: 8px; 
@@ -53,29 +59,42 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2);
             text-shadow: 0 1px 1px rgba(0,0,0,0.3);
         }
+        .aero-btn:hover { background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%); }
+        
         #chatContainer { display: flex; flex-direction: column; flex: 1; }
-        #chat { flex: 1; border-radius: 10px; padding: 15px; overflow-y: auto; margin-bottom: 15px; }
-        .message { margin-bottom: 10px; background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 80%; }
+        #chat { flex: 1; border-radius: 10px; padding: 15px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 80%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); }
+        .message span.username { font-weight: bold; color: #ffeb3b; margin-right: 8px; }
+        .message span.time { font-size: 11px; color: rgba(255,255,255,0.7); margin-left: 10px; float: right; margin-top: 3px; }
         .form-group { display: flex; gap: 10px; }
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
-        #nameInput { width: 130px; }
         #messageInput { flex: 1; }
     </style>
 </head>
 <body>
-    <div id="lockScreen" class="glass-box" style="position: absolute; width: 80%; max-width: 400px; left: 50%; top: 50%; transform: translate(-50%, -50%);">
+    <!-- 1. Şifre Kilit Ekranı (Fizik 11 Kılıfı) -->
+    <div id="lockScreen" class="glass-box center-screen">
         <h2>📚 Fizik 11 - Ünite 2 Notları</h2>
         <input id="pinInput" type="password" placeholder="Şifre..." />
         <button class="aero-btn" onclick="checkPin()">Giriş Yap</button>
-        <p id="errorMsg" style="color: #ffdddd; display: none;">Hatalı şifre!</p>
+        <p id="errorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;">Hatalı şifre!</p>
     </div>
     
+    <!-- 2. Nickname Seçim Ekranı -->
+    <div id="nicknameScreen" class="glass-box center-screen hidden">
+        <h2>🚗 Project TR // Nickname</h2>
+        <p style="font-size: 14px; margin: 0; color: rgba(255,255,255,0.9);">İsim çakışmasın, takma adını gir:</p>
+        <input id="nicknameInput" type="text" placeholder="Kullanıcı adın..." autocomplete="off" />
+        <button class="aero-btn" onclick="setNickname()">Sisteme Gir</button>
+        <p id="nickErrorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;"></p>
+    </div>
+
+    <!-- 3. Asıl Sohbet Ekranı -->
     <div id="chatContainer" class="hidden">
-        <h2>🌐 Project TR // Aero Chat</h2>
+        <h2 style="margin-top: 0; font-size: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">🌐 Project TR // Aero Chat (<span id="currentUserDisplay" style="color: #ffeb3b;"></span>)</h2>
         <div id="chat" class="glass-box"></div>
         <form id="form" class="form-group">
-            <input id="nameInput" type="text" placeholder="İsmin..." required autocomplete="off" />
-            <input id="messageInput" type="text" placeholder="Mesajını yaz..." required autocomplete="off" />
+            <input id="messageInput" type="text" placeholder="Mesajını yaz şampiyon..." required autocomplete="off" />
             <button class="aero-btn" type="submit">Gönder</button>
         </form>
     </div>
@@ -83,49 +102,89 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SECRET_PIN = "1992";
+        let myUsername = '';
+        const socket = io();
+
+        // 1. Şifre Kontrolü
         function checkPin() {
             if (document.getElementById('pinInput').value === SECRET_PIN) {
                 document.getElementById('lockScreen').classList.add('hidden');
-                document.getElementById('chatContainer').classList.remove('hidden');
+                document.getElementById('nicknameScreen').classList.remove('hidden');
+                document.getElementById('nicknameInput').focus();
             } else {
                 document.getElementById('errorMsg').style.display = 'block';
             }
         }
 
-        const socket = io();
+        // 2. Nickname (İsim) Kontrolü ve Sunucuya Kayıt
+        function setNickname() {
+            const enteredName = document.getElementById('nicknameInput').value.trim();
+            const nickErr = document.getElementById('nickErrorMsg');
+            
+            if (!enteredName) {
+                nickErr.textContent = "İsim boş bırakılamaz kanka!";
+                nickErr.style.display = 'block';
+                return;
+            }
+
+            socket.emit('set-username', enteredName, (response) => {
+                if (response.success) {
+                    myUsername = enteredName;
+                    document.getElementById('currentUserDisplay').textContent = myUsername;
+                    document.getElementById('nicknameScreen').classList.add('hidden');
+                    document.getElementById('chatContainer').classList.remove('hidden');
+                    document.getElementById('messageInput').focus();
+                } else {
+                    nickErr.textContent = response.message;
+                    nickErr.style.display = 'block';
+                }
+            });
+        }
+
+        // Enter tuşu kısayolları
+        document.getElementById('pinInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkPin();
+        });
+        document.getElementById('nicknameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') setNickname();
+        });
+
         const form = document.getElementById('form');
-        const nameInput = document.getElementById('nameInput');
         const messageInput = document.getElementById('messageInput');
         const chat = document.getElementById('chat');
 
-        // 1. Sayfa açıldığında MongoDB'den gelen geçmiş mesajları ekrana diz
+        // Geçmiş mesajları yükle
         socket.on('init_messages', (messages) => {
-            messages.forEach(msg => {
-                displayMessage(msg);
-            });
+            messages.forEach(msg => displayMessage(msg));
         });
 
-        // 2. Mesaj gönderme
+        // Mesaj gönderme
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            if (messageInput.value && nameInput.value) {
-                socket.emit('chat message', { user: nameInput.value, text: messageInput.value });
+            if (messageInput.value.trim() && myUsername) {
+                socket.emit('chat message', { user: myUsername, text: messageInput.value });
                 messageInput.value = '';
             }
         });
 
-        // 3. Canlı gelen yeni mesajı ekrana ekle
+        // Canlı gelen yeni mesaj
         socket.on('chat message', function(msg) {
             displayMessage(msg);
         });
 
-        // Mesajı kutuya ekleyen fonksiyon
+        // Mesajı ekrana basma fonksiyonu
         function displayMessage(msg) {
             const item = document.createElement('div');
             item.className = 'message';
-            item.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
+            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            item.innerHTML = `<span class="username">${msg.user}:</span> ${escapeHtml(msg.text)} <span class="time">${timeStr}</span>`;
             chat.appendChild(item);
             chat.scrollTop = chat.scrollHeight;
+        }
+
+        // Güvenlik (XSS engelleme)
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
     </script>
 </body>
