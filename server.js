@@ -11,7 +11,6 @@ const io = new Server(server);
 const activeUsers = new Map();
 const userProfiles = new Map();
 
-// İSTEDİĞİN EFSANE PROJECT TR LOGOSU GRUP İKONU OLARAK AYARLANDI!
 let groupSettings = {
     icon: 'https://i.ibb.co/1G34639/1000092861.png', 
     admins: ['Fatih', 'fatih']
@@ -67,7 +66,9 @@ io.on('connection', async (socket) => {
         }
 
         activeUsers.set(cleanUser, socket.id);
-        if(avatar) userProfiles.set(cleanUser, avatar);
+        if(avatar) {
+            userProfiles.set(cleanUser, avatar);
+        }
         socket.username = cleanUser;
         callback({ success: true });
         
@@ -117,6 +118,7 @@ io.on('connection', async (socket) => {
         console.error('Geçmiş mesajlar yüklenemedi:', err);
     }
 
+    // MESAJ GÖNDERME KISMI - AVATAR KESİN OLARAK KAYDEDİLİYOR
     socket.on('chat message', async (data) => {
         try {
             const userAvatar = userProfiles.get(data.user) || '';
@@ -128,6 +130,7 @@ io.on('connection', async (socket) => {
             });
             await newMessage.save();
 
+            // Herkese avatarıyla birlikte anında fırlat
             io.emit('chat message', newMessage);
         } catch (err) {
             console.error('Mesaj kaydedilemedi:', err);
