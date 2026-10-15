@@ -9,7 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const activeUsers = new Map();
-const userProfiles = new Map(); 
+const userProfiles = new Map();
 
 let groupSettings = {
     icon: 'https://cdn-icons-png.flaticon.com/512/882/882747.png',
@@ -44,25 +44,32 @@ io.on('connection', async (socket) => {
             avatar = '';
         }
 
-        if (!username || username.trim() === '') return callback({ success: false, message: "Geçersiz isim kanka!" });
+        if (!username || username.trim() === '') {
+            return callback({ success: false, message: "Geçersiz isim kanka!" });
+        }
+        
         const cleanUser = username.trim();
         
         if (activeUsers.has(cleanUser)) {
-            if (io.sockets.sockets.has(activeUsers.get(cleanUser))) {
-                return callback({ success: false, message: "Bu isim asılı kalmış olabilir, tekrar deneniyor..." });
+            const existingSocketId = activeUsers.get(cleanUser);
+            if (io.sockets.sockets.has(existingSocketId)) {
+                return callback({ success: false, message: "Bu isim şu an başka bir cihazda aktif!" });
             } else {
                 activeUsers.delete(cleanUser);
             }
         }
 
         for (let [user, sId] of activeUsers.entries()) {
-            if (sId === socket.id) activeUsers.delete(user);
+            if (sId === socket.id) {
+                activeUsers.delete(user);
+            }
         }
 
         activeUsers.set(cleanUser, socket.id);
         userProfiles.set(cleanUser, avatar);
         socket.username = cleanUser;
         callback({ success: true });
+        
         broadcastActiveUsers();
     });
 
@@ -94,9 +101,11 @@ io.on('connection', async (socket) => {
                 if (msg) {
                     msg.pinned = !msg.pinned;
                     await msg.save();
-                    io.emit('pinned_updated', msg); 
+                    io.emit('pinned_updated', msg);
                 }
-            } catch (err) { console.error('Sabitleme hatası:', err); }
+            } catch (err) {
+                console.error('Sabitleme hatası:', err);
+            }
         }
     });
 
@@ -116,4 +125,40 @@ io.on('connection', async (socket) => {
                 pinned: false
             });
             await newMessage.save();
-            io.emit('chat message', newMessage);
+
+            const msgObj = newMessage.toObject();
+            msgObj.avatar = userProfiles.get(data.user) || '';
+            io.emit('chat message', msgObj);
+        } catch (err) {
+            console.error('Mesaj kaydedilemedi:', err);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        if (socket.username) {
+            activeUsers.delete(socket.username);
+            console.log(`${socket.username} hattan düştü.`);
+            broadcastActiveUsers();
+        }
+    });
+});
+
+setInterval(async () => {
+    try {
+        const threeDaysAgo = new Date(Date.now() - (3 * 24 * 60 * 60 * 1000));
+        const result = await Message.deleteMany({
+            timestamp: { $lt: threeDaysAgo },
+            pinned: { $ne: true }
+        });
+        if (result.deletedCount > 0) {
+            console.log(`${result.deletedCount} adet eski mesaj temizlendi! 🧹`);
+        }
+    } catch (err) {
+        console.error('Otomatik temizleme hatası:', err);
+    }
+}, 60 * 60 * 1000);
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Sunucu ayakta! Port: ${PORT}`);
+});
