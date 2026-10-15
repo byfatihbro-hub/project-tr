@@ -62,17 +62,37 @@
         .aero-btn:hover { background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%); }
         
         #chatContainer { display: flex; flex-direction: column; flex: 1; }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
         #chat { flex: 1; border-radius: 10px; padding: 15px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
         .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 80%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); }
+        .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; }
         .message span.username { font-weight: bold; color: #ffeb3b; margin-right: 8px; }
         .message span.time { font-size: 11px; color: rgba(255,255,255,0.7); margin-left: 10px; float: right; margin-top: 3px; }
+        .mention-tag { background: rgba(255, 235, 59, 0.4); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        
         .form-group { display: flex; gap: 10px; }
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
         #messageInput { flex: 1; }
+
+        .notif-toggle {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .notif-toggle.active { background: #4facfe; border-color: #fff; }
     </style>
 </head>
 <body>
-    <!-- 1. Şifre Kilit Ekranı (Fizik 11 Kılıfı) -->
+    <!-- 1. Şifre Kilit Ekranı -->
     <div id="lockScreen" class="glass-box center-screen">
         <h2>📚 Fizik 11 - Ünite 2 Notları</h2>
         <input id="pinInput" type="password" placeholder="Şifre..." />
@@ -91,10 +111,13 @@
 
     <!-- 3. Asıl Sohbet Ekranı -->
     <div id="chatContainer" class="hidden">
-        <h2 style="margin-top: 0; font-size: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">🌐 Project TR // Aero Chat (<span id="currentUserDisplay" style="color: #ffeb3b;"></span>)</h2>
+        <div class="chat-header">
+            <h2 style="margin: 0; font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">🌐 Project TR (<span id="currentUserDisplay" style="color: #ffeb3b;"></span>)</h2>
+            <button id="notifBtn" class="notif-toggle" onclick="toggleNotifications()">🔔 Bildirimler: Kapalı</button>
+        </div>
         <div id="chat" class="glass-box"></div>
         <form id="form" class="form-group">
-            <input id="messageInput" type="text" placeholder="Mesajını yaz şampiyon..." required autocomplete="off" />
+            <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
             <button class="aero-btn" type="submit">Gönder</button>
         </form>
     </div>
@@ -103,9 +126,9 @@
     <script>
         const SECRET_PIN = "1992";
         let myUsername = '';
+        let notificationsEnabled = false;
         const socket = io();
 
-        // 1. Şifre Kontrolü
         function checkPin() {
             if (document.getElementById('pinInput').value === SECRET_PIN) {
                 document.getElementById('lockScreen').classList.add('hidden');
@@ -116,7 +139,6 @@
             }
         }
 
-        // 2. Nickname (İsim) Kontrolü ve Sunucuya Kayıt
         function setNickname() {
             const enteredName = document.getElementById('nicknameInput').value.trim();
             const nickErr = document.getElementById('nickErrorMsg');
@@ -141,24 +163,41 @@
             });
         }
 
-        // Enter tuşu kısayolları
-        document.getElementById('pinInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') checkPin();
-        });
-        document.getElementById('nicknameInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') setNickname();
-        });
+        // Bildirim Açma / Kapatma ve İzin Yönetimi
+        function toggleNotifications() {
+            const btn = document.getElementById('notifBtn');
+            if (!notificationsEnabled) {
+                if (!("Notification" in window)) {
+                    alert("Tarayıcınız bildirimleri desteklemiyor kanka!");
+                    return;
+                }
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        notificationsEnabled = true;
+                        btn.textContent = "🔕 Bildirimler: Açık";
+                        btn.classList.add('active');
+                    } else {
+                        alert("Bildirim izni vermedin kanka.");
+                    }
+                });
+            } else {
+                notificationsEnabled = false;
+                btn.textContent = "🔔 Bildirimler: Kapalı";
+                btn.classList.remove('active');
+            }
+        }
+
+        document.getElementById('pinInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPin(); });
+        document.getElementById('nicknameInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') setNickname(); });
 
         const form = document.getElementById('form');
         const messageInput = document.getElementById('messageInput');
         const chat = document.getElementById('chat');
 
-        // Geçmiş mesajları yükle
         socket.on('init_messages', (messages) => {
             messages.forEach(msg => displayMessage(msg));
         });
 
-        // Mesaj gönderme
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             if (messageInput.value.trim() && myUsername) {
@@ -167,22 +206,38 @@
             }
         });
 
-        // Canlı gelen yeni mesaj
         socket.on('chat message', function(msg) {
             displayMessage(msg);
+            
+            // Eğer bildirimler açıksa ve mesajı başkası attıysa bildirim gönder
+            if (notificationsEnabled && msg.user !== myUsername) {
+                // Eğer kullanıcı etiketlendiyse (örn: @Fatih) veya genel bildirim istiyorsa
+                if (msg.text.includes(`@${myUsername}`)) {
+                    new Notification(`@${myUsername} seni etiketledi!`, {
+                        body: `${msg.user}: ${msg.text}`,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
+                    });
+                }
+            }
         });
 
-        // Mesajı ekrana basma fonksiyonu
         function displayMessage(msg) {
             const item = document.createElement('div');
             item.className = 'message';
+            
+            // Etiketleme kontrolü (Eğer mesajda benim adim geçiyorsa kutuyu renklendir)
+            let formattedText = escapeHtml(msg.text);
+            if (myUsername && msg.text.includes(`@${myUsername}`)) {
+                item.classList.add('mentioned');
+                formattedText = formattedText.replace(new RegExp(`@${myUsername}`, 'g'), `<span class="mention-tag">@${myUsername}</span>`);
+            }
+
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            item.innerHTML = `<span class="username">${msg.user}:</span> ${escapeHtml(msg.text)} <span class="time">${timeStr}</span>`;
+            item.innerHTML = `<span class="username">${msg.user}:</span> ${formattedText} <span class="time">${timeStr}</span>`;
             chat.appendChild(item);
             chat.scrollTop = chat.scrollHeight;
         }
 
-        // Güvenlik (XSS engelleme)
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
