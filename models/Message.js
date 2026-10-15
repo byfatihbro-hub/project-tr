@@ -4,7 +4,7 @@ const messageSchema = new mongoose.Schema({
     user: { type: String, required: true },
     text: { type: String, required: true },
     avatar: { type: String, default: '' },
-    pinned: { type: Boolean, default: false }, // Sabitleme özelliği için eklendi
+    pinned: { type: Boolean, default: false },
     timestamp: { type: Date, default: Date.now }
 });
 
