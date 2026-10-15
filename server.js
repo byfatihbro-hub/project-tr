@@ -8,11 +8,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Aktif kullanıcı isimlerini tutacağımız liste
-const activeUsernames = new Set();
+// Kullanıcı adı -> Socket ID eşlemesi (Yenileme çakışmalarını önlemek için)
+const activeUsers = new Map();
 
 // MongoDB Atlas Bağlantısı
-mongoose.connect('mongodb+srv:://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
+mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
     .then(() => console.log('MongoDB Atlas bağlantısı başarılı! 🟢'))
     .catch(err => console.error('MongoDB bağlantı hatası:', err));
 
@@ -21,20 +21,33 @@ app.use(express.static('public'));
 io.on('connection', async (socket) => {
     console.log('Project TR hattına bağlandılar! 🚗');
 
-    // Kullanıcı adı (nickname) çakışma kontrolü
     socket.on('set-username', (username, callback) => {
         if (!username || username.trim() === '') {
             return callback({ success: false, message: "Geçersiz isim kanka!" });
         }
         
         const cleanUser = username.trim();
-        if (activeUsernames.has(cleanUser)) {
-            callback({ success: false, message: "Bu isim alınmış kanka, başka bir tane seç!" });
-        } else {
-            activeUsernames.add(cleanUser);
-            socket.username = cleanUser;
-            callback({ success: true });
+        
+        // Eğer bu isim başkası tarafından aktif olarak kullanılıyorsa
+        if (activeUsers.has(cleanUser)) {
+            const existingSocketId = activeUsers.get(cleanUser);
+            if (io.sockets.sockets.has(existingSocketId)) {
+                return callback({ success: false, message: "Bu isim şu an başka bir cihazda aktif kullanılıyor kanka!" });
+            } else {
+                activeUsers.delete(cleanUser); // Eski düşmüş bağlantıyı temizle
+            }
         }
+
+        // Bu socket'in daha önceki kaydı varsa temizle
+        for (let [user, sId] of activeUsers.entries()) {
+            if (sId === socket.id) {
+                activeUsers.delete(user);
+            }
+        }
+
+        activeUsers.set(cleanUser, socket.id);
+        socket.username = cleanUser;
+        callback({ success: true });
     });
 
     // 1. Geçmiş mesajları gönder
@@ -60,10 +73,9 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // Bağlantı kopunca ismi listeden temizleyelim ki boşa çıksın
     socket.on('disconnect', () => {
         if (socket.username) {
-            activeUsernames.delete(socket.username);
+            activeUsers.delete(socket.username);
             console.log(`${socket.username} hattan düştü.`);
         } else {
             console.log('Biri hattan düştü.');
