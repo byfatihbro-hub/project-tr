@@ -2,19 +2,48 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fizik 11 - Çalışma Notları</title>
     <style>
+        * { box-sizing: border-box; }
         body { 
             background: linear-gradient(135deg, #1a73e8 0%, #00b4d8 50%, #90e0ef 100%); 
             color: #fff; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; 
-            padding: 20px; 
+            padding: 0; 
             display: flex; 
             flex-direction: column; 
-            height: 90vh; 
+            height: 100dvh; 
+            overflow: hidden;
+            justify-content: center;
+            align-items: center;
         }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            background: transparent;
+        }
+
+        @media (min-width: 768px) {
+            .app-container {
+                max-width: 850px;
+                max-height: 85vh;
+                height: 85vh;
+                border-radius: 16px;
+                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                background: rgba(18, 18, 18, 0.4);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                padding: 20px;
+            }
+        }
+
         .hidden { display: none !important; }
         .glass-box {
             background: rgba(255, 255, 255, 0.15);
@@ -23,11 +52,11 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
             box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37);
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px;
         }
         .center-screen {
             position: absolute;
-            width: 80%;
+            width: 90%;
             max-width: 400px;
             left: 50%;
             top: 50%;
@@ -38,6 +67,7 @@
             align-items: center;
             gap: 15px;
             text-align: center;
+            z-index: 100;
         }
         .center-screen input, .center-screen button { 
             padding: 12px; 
@@ -61,65 +91,75 @@
         }
         .aero-btn:hover { background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%); }
         
-        #chatContainer { display: flex; flex-direction: column; flex: 1; }
+        #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; }
         .chat-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
+            padding: 0 5px;
         }
-        #chat { flex: 1; border-radius: 10px; padding: 15px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .header-buttons { display: flex; gap: 6px; }
+        #chat { flex: 1; border-radius: 10px; padding: 12px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
         .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 80%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); }
         .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; }
         .message span.username { font-weight: bold; color: #ffeb3b; margin-right: 8px; }
         .message span.time { font-size: 11px; color: rgba(255,255,255,0.7); margin-left: 10px; float: right; margin-top: 3px; }
         .mention-tag { background: rgba(255, 235, 59, 0.4); color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         
-        .form-group { display: flex; gap: 10px; }
+        .form-group { display: flex; gap: 8px; }
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
         #messageInput { flex: 1; }
 
-        .notif-toggle {
+        .action-btn {
             background: rgba(0,0,0,0.3);
             border: 1px solid rgba(255,255,255,0.4);
             color: #fff;
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
         }
-        .notif-toggle.active { background: #4facfe; border-color: #fff; }
+        .action-btn.active { background: #4facfe; border-color: #fff; }
     </style>
 </head>
 <body>
-    <!-- 1. Şifre Kilit Ekranı -->
-    <div id="lockScreen" class="glass-box center-screen">
-        <h2>📚 Fizik 11 - Ünite 2 Notları</h2>
-        <input id="pinInput" type="password" placeholder="Şifre..." />
-        <button class="aero-btn" onclick="checkPin()">Giriş Yap</button>
-        <p id="errorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;">Hatalı şifre!</p>
-    </div>
-    
-    <!-- 2. Nickname Seçim Ekranı -->
-    <div id="nicknameScreen" class="glass-box center-screen hidden">
-        <h2>🚗 Project TR // Nickname</h2>
-        <p style="font-size: 14px; margin: 0; color: rgba(255,255,255,0.9);">İsim çakışmasın, takma adını gir:</p>
-        <input id="nicknameInput" type="text" placeholder="Kullanıcı adın..." autocomplete="off" />
-        <button class="aero-btn" onclick="setNickname()">Sisteme Gir</button>
-        <p id="nickErrorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;"></p>
-    </div>
 
-    <!-- 3. Asıl Sohbet Ekranı -->
-    <div id="chatContainer" class="hidden">
-        <div class="chat-header">
-            <h2 style="margin: 0; font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">🌐 Project TR (<span id="currentUserDisplay" style="color: #ffeb3b;"></span>)</h2>
-            <button id="notifBtn" class="notif-toggle" onclick="toggleNotifications()">🔔 Bildirimler: Kapalı</button>
+    <div class="app-container">
+
+        <!-- 1. Şifre Kilit Ekranı -->
+        <div id="lockScreen" class="glass-box center-screen">
+            <h2>📚 Fizik 11 - Ünite 2 Notları</h2>
+            <input id="pinInput" type="password" placeholder="Şifre..." />
+            <button class="aero-btn" onclick="checkPin()">Giriş Yap</button>
+            <p id="errorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;">Hatalı şifre!</p>
         </div>
-        <div id="chat" class="glass-box"></div>
-        <form id="form" class="form-group">
-            <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
-            <button class="aero-btn" type="submit">Gönder</button>
-        </form>
+        
+        <!-- 2. Nickname Seçim Ekranı (İlk kez girenler veya süre dolunca) -->
+        <div id="nicknameScreen" class="glass-box center-screen hidden">
+            <h2>🚗 Project TR // Nickname</h2>
+            <p style="font-size: 13px; margin: 0; color: rgba(255,255,255,0.9);">Bu cihaz için adını belirle (2 hafta değiştiremezsin):</p>
+            <input id="nicknameInput" type="text" placeholder="Kullanıcı adın..." autocomplete="off" />
+            <button class="aero-btn" onclick="setNickname()">Sisteme Gir</button>
+            <p id="nickErrorMsg" style="color: #ffdddd; display: none; margin: 0; font-size: 14px;"></p>
+        </div>
+
+        <!-- 3. Asıl Sohbet Ekranı -->
+        <div id="chatContainer" class="hidden">
+            <div class="chat-header">
+                <h2 style="margin: 0; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">🌐 Project TR (<span id="currentUserDisplay" style="color: #ffeb3b;"></span>)</h2>
+                <div class="header-buttons">
+                    <button id="changeNickBtn" class="action-btn" onclick="requestChangeNick()" title="2 haftada bir değiştirilebilir">⚙️ Nick Değiştir</button>
+                    <button id="notifBtn" class="action-btn" onclick="toggleNotifications()">🔔 Bildirim</button>
+                </div>
+            </div>
+            <div id="chat" class="glass-box"></div>
+            <form id="form" class="form-group">
+                <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
+                <button class="aero-btn" type="submit">Gönder</button>
+            </form>
+        </div>
+
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -129,11 +169,38 @@
         let notificationsEnabled = false;
         const socket = io();
 
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const chat = document.getElementById('chat');
+                chat.scrollTop = chat.scrollHeight;
+            });
+        }
+
         function checkPin() {
             if (document.getElementById('pinInput').value === SECRET_PIN) {
                 document.getElementById('lockScreen').classList.add('hidden');
-                document.getElementById('nicknameScreen').classList.remove('hidden');
-                document.getElementById('nicknameInput').focus();
+                
+                // Cihazda daha önce kaydedilmiş bir nick var mı kontrol et
+                const savedUser = localStorage.getItem('project_tr_username');
+                if (savedUser) {
+                    // Otomatik olarak kayıtlı nick ile sunucuya bağlan
+                    socket.emit('set-username', savedUser, (response) => {
+                        if (response.success) {
+                            myUsername = savedUser;
+                            document.getElementById('currentUserDisplay').textContent = myUsername;
+                            document.getElementById('chatContainer').classList.remove('hidden');
+                            document.getElementById('messageInput').focus();
+                        } else {
+                            // Sunucuda çakışma olduysa nickname ekranına at
+                            localStorage.removeItem('project_tr_username');
+                            document.getElementById('nicknameScreen').classList.remove('hidden');
+                            document.getElementById('nicknameInput').focus();
+                        }
+                    });
+                } else {
+                    document.getElementById('nicknameScreen').classList.remove('hidden');
+                    document.getElementById('nicknameInput').focus();
+                }
             } else {
                 document.getElementById('errorMsg').style.display = 'block';
             }
@@ -152,6 +219,10 @@
             socket.emit('set-username', enteredName, (response) => {
                 if (response.success) {
                     myUsername = enteredName;
+                    // Cihaza kaydet ve bugünün tarihini damcala (2 hafta kısıtı için)
+                    localStorage.setItem('project_tr_username', myUsername);
+                    localStorage.setItem('project_tr_nick_date', Date.now().toString());
+
                     document.getElementById('currentUserDisplay').textContent = myUsername;
                     document.getElementById('nicknameScreen').classList.add('hidden');
                     document.getElementById('chatContainer').classList.remove('hidden');
@@ -163,7 +234,24 @@
             });
         }
 
-        // Bildirim Açma / Kapatma ve İzin Yönetimi
+        // 2 Hafta (14 Gün) Nick Değiştirme Kontrolü
+        function requestChangeNick() {
+            const lastSetDate = parseInt(localStorage.getItem('project_tr_nick_date') || '0');
+            const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+
+            if (now - lastSetDate < twoWeeksMs) {
+                const remainingDays = Math.ceil((twoWeeksMs - (now - lastSetDate)) / (1000 * 60 * 60 * 24));
+                alert(`Kanka kullanıcı adını değiştirmek için ${remainingDays} gün daha beklemelisin! (2 haftada bir değişebilir)`);
+            } else {
+                if (confirm("Kullanıcı adını değiştirmek istiyor musun? Süren dolmuş.")) {
+                    localStorage.removeItem('project_tr_username');
+                    localStorage.removeItem('project_tr_nick_date');
+                    location.reload();
+                }
+            }
+        }
+
         function toggleNotifications() {
             const btn = document.getElementById('notifBtn');
             if (!notificationsEnabled) {
@@ -174,7 +262,7 @@
                 Notification.requestPermission().then(permission => {
                     if (permission === "granted") {
                         notificationsEnabled = true;
-                        btn.textContent = "🔕 Bildirimler: Açık";
+                        btn.textContent = "🔕 Açık";
                         btn.classList.add('active');
                     } else {
                         alert("Bildirim izni vermedin kanka.");
@@ -182,7 +270,7 @@
                 });
             } else {
                 notificationsEnabled = false;
-                btn.textContent = "🔔 Bildirimler: Kapalı";
+                btn.textContent = "🔔 Bildirim";
                 btn.classList.remove('active');
             }
         }
@@ -209,9 +297,7 @@
         socket.on('chat message', function(msg) {
             displayMessage(msg);
             
-            // Eğer bildirimler açıksa ve mesajı başkası attıysa bildirim gönder
             if (notificationsEnabled && msg.user !== myUsername) {
-                // Eğer kullanıcı etiketlendiyse (örn: @Fatih) veya genel bildirim istiyorsa
                 if (msg.text.includes(`@${myUsername}`)) {
                     new Notification(`@${myUsername} seni etiketledi!`, {
                         body: `${msg.user}: ${msg.text}`,
@@ -225,7 +311,6 @@
             const item = document.createElement('div');
             item.className = 'message';
             
-            // Etiketleme kontrolü (Eğer mesajda benim adim geçiyorsa kutuyu renklendir)
             let formattedText = escapeHtml(msg.text);
             if (myUsername && msg.text.includes(`@${myUsername}`)) {
                 item.classList.add('mentioned');
