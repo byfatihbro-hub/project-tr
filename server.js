@@ -11,8 +11,9 @@ const io = new Server(server);
 const activeUsers = new Map();
 const userProfiles = new Map();
 
+// İSTEDİĞİN EFSANE PROJECT TR LOGOSU GRUP İKONU OLARAK AYARLANDI!
 let groupSettings = {
-    icon: 'https://cdn-icons-png.flaticon.com/512/882/882747.png',
+    icon: 'https://i.ibb.co/1G34639/1000092861.png', 
     admins: ['Fatih', 'fatih']
 };
 
@@ -51,12 +52,12 @@ io.on('connection', async (socket) => {
         const cleanUser = username.trim();
         
         if (activeUsers.has(cleanUser)) {
-            const existingSocketId = activeUsers.get(cleanUser);
-            if (io.sockets.sockets.has(existingSocketId)) {
-                return callback({ success: false, message: "Bu isim şu an başka bir cihazda aktif!" });
-            } else {
-                activeUsers.delete(cleanUser);
+            const oldSocketId = activeUsers.get(cleanUser);
+            const oldSocket = io.sockets.sockets.get(oldSocketId);
+            if (oldSocket) {
+                oldSocket.disconnect();
             }
+            activeUsers.delete(cleanUser);
         }
 
         for (let [user, sId] of activeUsers.entries()) {
@@ -66,7 +67,7 @@ io.on('connection', async (socket) => {
         }
 
         activeUsers.set(cleanUser, socket.id);
-        userProfiles.set(cleanUser, avatar);
+        if(avatar) userProfiles.set(cleanUser, avatar);
         socket.username = cleanUser;
         callback({ success: true });
         
@@ -118,17 +119,16 @@ io.on('connection', async (socket) => {
 
     socket.on('chat message', async (data) => {
         try {
+            const userAvatar = userProfiles.get(data.user) || '';
             const newMessage = new Message({
                 user: data.user,
                 text: data.text,
-                avatar: userProfiles.get(data.user) || '',
+                avatar: userAvatar,
                 pinned: false
             });
             await newMessage.save();
 
-            const msgObj = newMessage.toObject();
-            msgObj.avatar = userProfiles.get(data.user) || '';
-            io.emit('chat message', msgObj);
+            io.emit('chat message', newMessage);
         } catch (err) {
             console.error('Mesaj kaydedilemedi:', err);
         }
@@ -137,7 +137,6 @@ io.on('connection', async (socket) => {
     socket.on('disconnect', () => {
         if (socket.username) {
             activeUsers.delete(socket.username);
-            console.log(`${socket.username} hattan düştü.`);
             broadcastActiveUsers();
         }
     });
@@ -146,13 +145,10 @@ io.on('connection', async (socket) => {
 setInterval(async () => {
     try {
         const threeDaysAgo = new Date(Date.now() - (3 * 24 * 60 * 60 * 1000));
-        const result = await Message.deleteMany({
+        await Message.deleteMany({
             timestamp: { $lt: threeDaysAgo },
             pinned: { $ne: true }
         });
-        if (result.deletedCount > 0) {
-            console.log(`${result.deletedCount} adet eski mesaj temizlendi! 🧹`);
-        }
     } catch (err) {
         console.error('Otomatik temizleme hatası:', err);
     }
