@@ -12,7 +12,7 @@ const activeUsers = new Map();
 const userProfiles = new Map();
 
 let groupSettings = {
-    icon: 'https://i.ibb.co/1G34639/1000092861.png', 
+    icon: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500', // Kesin çalışan sağlam grup resmi
     admins: ['Fatih', 'fatih']
 };
 
@@ -25,7 +25,14 @@ function broadcastActiveUsers() {
 }
 
 mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
-    .then(() => console.log('MongoDB Atlas bağlantısı başarılı! 🟢'))
+    .then(async () => {
+        console.log('MongoDB Atlas bağlantısı başarılı! 🟢');
+        // Sunucu açıldığı an şu ana kadarki tüm eski/çöp mesajları temizle (İstediğin sıfırlama)
+        try {
+            await Message.deleteMany({ pinned: { $ne: true } });
+            console.log('Şu ana kadarki eski/çöp mesajlar temizlendi, sadece sabitlenenler bırakıldı! 🧹');
+        } catch(e) {}
+    })
     .catch(err => console.error('MongoDB bağlantı hatası:', err));
 
 app.use(express.static('public'));
@@ -37,39 +44,31 @@ io.on('connection', async (socket) => {
     socket.on('set-username', (data, callback) => {
         let username, avatar;
         if (typeof data === 'object') {
-            username = data.username;
+            username = data.username ? data.username.trim() : '';
             avatar = data.avatar || '';
         } else {
-            username = data;
+            username = data ? data.trim() : '';
             avatar = '';
         }
 
-        if (!username || username.trim() === '') {
+        if (!username) {
             return callback({ success: false, message: "Geçersiz isim kanka!" });
         }
         
-        const cleanUser = username.trim();
-        
-        if (activeUsers.has(cleanUser)) {
-            const oldSocketId = activeUsers.get(cleanUser);
+        if (activeUsers.has(username)) {
+            const oldSocketId = activeUsers.get(username);
             const oldSocket = io.sockets.sockets.get(oldSocketId);
-            if (oldSocket) {
-                oldSocket.disconnect();
-            }
-            activeUsers.delete(cleanUser);
+            if (oldSocket) oldSocket.disconnect();
+            activeUsers.delete(username);
         }
 
         for (let [user, sId] of activeUsers.entries()) {
-            if (sId === socket.id) {
-                activeUsers.delete(user);
-            }
+            if (sId === socket.id) activeUsers.delete(user);
         }
 
-        activeUsers.set(cleanUser, socket.id);
-        if(avatar) {
-            userProfiles.set(cleanUser, avatar);
-        }
-        socket.username = cleanUser;
+        activeUsers.set(username, socket.id);
+        if(avatar) userProfiles.set(username, avatar);
+        socket.username = username;
         callback({ success: true });
         
         broadcastActiveUsers();
@@ -86,6 +85,16 @@ io.on('connection', async (socket) => {
         if (groupSettings.admins.includes(socket.username)) {
             groupSettings.icon = newUrl;
             io.emit('group_settings', groupSettings);
+        }
+    });
+
+    // YENİ: ŞİFRE İLE YÖNETİCİ OLMA (Admin password: 1992)
+    socket.on('claim_admin', (pin) => {
+        if (pin === "1992" && socket.username) {
+            if (!groupSettings.admins.includes(socket.username)) {
+                groupSettings.admins.push(socket.username);
+                io.emit('group_settings', groupSettings);
+            }
         }
     });
 
@@ -118,19 +127,18 @@ io.on('connection', async (socket) => {
         console.error('Geçmiş mesajlar yüklenemedi:', err);
     }
 
-    // MESAJ GÖNDERME KISMI - AVATAR KESİN OLARAK KAYDEDİLİYOR
     socket.on('chat message', async (data) => {
         try {
-            const userAvatar = userProfiles.get(data.user) || '';
+            const cleanUser = data.user ? data.user.trim() : '';
+            const userAvatar = userProfiles.get(cleanUser) || '';
             const newMessage = new Message({
-                user: data.user,
+                user: cleanUser,
                 text: data.text,
                 avatar: userAvatar,
                 pinned: false
             });
             await newMessage.save();
 
-            // Herkese avatarıyla birlikte anında fırlat
             io.emit('chat message', newMessage);
         } catch (err) {
             console.error('Mesaj kaydedilemedi:', err);
@@ -145,6 +153,7 @@ io.on('connection', async (socket) => {
     });
 });
 
+// 3 günden eski sabitlenmemiş mesajları temizleyen döngü
 setInterval(async () => {
     try {
         const threeDaysAgo = new Date(Date.now() - (3 * 24 * 60 * 60 * 1000));
