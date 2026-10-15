@@ -21,7 +21,6 @@
         .chat-header:hover { background: rgba(255,255,255,0.1); }
         .header-buttons { display: flex; gap: 6px; }
 
-        /* Sabitlenmiş Mesaj Barı */
         #pinnedBar { background: rgba(0, 0, 0, 0.4); border-left: 4px solid #ffeb3b; padding: 8px 12px; margin-bottom: 8px; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
         #pinnedBar:hover { background: rgba(0, 0, 0, 0.6); }
 
@@ -80,7 +79,6 @@
                 </div>
             </div>
 
-            <!-- SABİTLENMİŞ MESAJ BARI -->
             <div id="pinnedBar" class="hidden" onclick="scrollToPinned()">
                 <div style="font-weight: bold; color: #ffeb3b; font-size: 11px; margin-bottom: 2px;">📌 Sabitlenmiş Mesaj</div>
                 <div id="pinnedContent" style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
@@ -203,32 +201,17 @@
                 
                 const savedUser = localStorage.getItem('project_tr_username');
                 if (savedUser) {
-                    
-                    // OTOMATİK TEKRAR DENEME (HAYALET KIRICI)
-                    function tryLogin(retriesLeft) {
-                        socket.emit('set-username', { username: savedUser, avatar: myAvatar }, (response) => {
-                            if (response.success) {
-                                myUsername = savedUser; 
-                                document.getElementById('currentUserDisplay').textContent = myUsername;
-                                document.getElementById('chatContainer').classList.remove('hidden'); 
-                                document.getElementById('messageInput').focus();
-                            } else {
-                                if (retriesLeft > 0) {
-                                    // Sunucuda hayalet asılı kalmış olabilir, 1 saniye bekle bir daha zorla
-                                    setTimeout(() => tryLogin(retriesLeft - 1), 1000);
-                                } else {
-                                    // 2 kerede de giremezse ekranı aç ama HAFIZAYI SİLME
-                                    document.getElementById('nickErrorMsg').textContent = "İsmin asılı kaldı veya dolu. Biraz bekle veya bağlanmayı tekrar dene kanka.";
-                                    document.getElementById('nickErrorMsg').style.display = 'block';
-                                    document.getElementById('nicknameScreen').classList.remove('hidden');
-                                    document.getElementById('nicknameInput').value = savedUser;
-                                }
-                            }
-                        });
-                    }
-                    
-                    tryLogin(2); // Bağlantıyı 2 kere zorla
-                    
+                    socket.emit('set-username', { username: savedUser, avatar: myAvatar }, (response) => {
+                        if (response.success) {
+                            myUsername = savedUser; 
+                            document.getElementById('currentUserDisplay').textContent = myUsername;
+                            document.getElementById('chatContainer').classList.remove('hidden'); 
+                            document.getElementById('messageInput').focus();
+                        } else {
+                            document.getElementById('nicknameScreen').classList.remove('hidden');
+                            document.getElementById('nicknameInput').focus();
+                        }
+                    });
                 } else { document.getElementById('nicknameScreen').classList.remove('hidden'); document.getElementById('nicknameInput').focus(); }
             } else document.getElementById('errorMsg').style.display = 'block';
         }
@@ -270,8 +253,10 @@
         const mentionDropdown = document.getElementById('mentionDropdown');
 
         socket.on('init_messages', (messages) => {
+            chat.innerHTML = ''; // Eski kopyaları temizle
             messages.forEach(msg => {
                 allKnownUsers.add(msg.user);
+                if(msg.avatar) knownProfiles[msg.user] = msg.avatar;
                 displayMessage(msg);
                 if(msg.pinned) pinnedMessages.set(msg._id, msg);
             });
@@ -310,12 +295,19 @@
         });
 
         form.addEventListener('submit', function(e) {
-            e.preventDefault(); mentionDropdown.style.display = 'none';
-            if (messageInput.value.trim() && myUsername) { socket.emit('chat message', { user: myUsername, text: messageInput.value }); messageInput.value = ''; }
+            e.preventDefault(); 
+            mentionDropdown.style.display = 'none';
+            const text = messageInput.value.trim();
+            if (text && myUsername) {
+                socket.emit('chat message', { user: myUsername, text: text });
+                messageInput.value = '';
+            }
         });
 
+        // ANLIK MESAJ ALMA (Gecikmesiz)
         socket.on('chat message', function(msg) {
-            allKnownUsers.add(msg.user); if(msg.avatar) knownProfiles[msg.user] = msg.avatar;
+            allKnownUsers.add(msg.user); 
+            if(msg.avatar) knownProfiles[msg.user] = msg.avatar;
             document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} üye`;
             displayMessage(msg);
             
@@ -383,9 +375,18 @@
             const amIAdmin = currentGroupSettings.admins.includes(myUsername);
             const pinButtonHtml = amIAdmin && msg._id ? `<button class="pin-btn" onclick="togglePin('${msg._id}')" title="Sabitle / Kaldır">📌</button>` : '';
 
+            // Avatar bilgisini öncelikli olarak mesajın içinden, yoksa hafızadaki profilden alıyoruz
+            const userAvatar = msg.avatar || knownProfiles[msg.user];
+            let avatarHtml = '';
+            if (userAvatar) {
+                avatarHtml = `<img src="${escapeHtml(userAvatar)}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">`;
+            } else {
+                avatarHtml = `<div style="width: 35px; height: 35px; border-radius: 50%; background: #00b4d8; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">${msg.user.charAt(0).toUpperCase()}</div>`;
+            }
+
             item.innerHTML = `
                 <div style="display: flex; align-items: flex-start; gap: 10px;">
-                    ${getAvatarHtml(msg.user, 35)}
+                    ${avatarHtml}
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                             <span class="username" style="margin: 0;">${msg.user}</span>
