@@ -8,8 +8,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Kullanıcı adı -> Socket ID eşlemesi (Yenileme çakışmalarını önlemek için)
+// Kullanıcı adı -> Socket ID eşlemesi
 const activeUsers = new Map();
+
+// Online kullanıcı listesini herkese gönderen yardımcı fonksiyon
+function broadcastActiveUsers() {
+    const users = Array.from(activeUsers.keys());
+    io.emit('active_users', users);
+}
 
 // MongoDB Atlas Bağlantısı
 mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
@@ -28,17 +34,15 @@ io.on('connection', async (socket) => {
         
         const cleanUser = username.trim();
         
-        // Eğer bu isim başkası tarafından aktif olarak kullanılıyorsa
         if (activeUsers.has(cleanUser)) {
             const existingSocketId = activeUsers.get(cleanUser);
             if (io.sockets.sockets.has(existingSocketId)) {
                 return callback({ success: false, message: "Bu isim şu an başka bir cihazda aktif kullanılıyor kanka!" });
             } else {
-                activeUsers.delete(cleanUser); // Eski düşmüş bağlantıyı temizle
+                activeUsers.delete(cleanUser);
             }
         }
 
-        // Bu socket'in daha önceki kaydı varsa temizle
         for (let [user, sId] of activeUsers.entries()) {
             if (sId === socket.id) {
                 activeUsers.delete(user);
@@ -48,6 +52,9 @@ io.on('connection', async (socket) => {
         activeUsers.set(cleanUser, socket.id);
         socket.username = cleanUser;
         callback({ success: true });
+        
+        // Listeyi güncelle
+        broadcastActiveUsers();
     });
 
     // 1. Geçmiş mesajları gönder
@@ -77,6 +84,7 @@ io.on('connection', async (socket) => {
         if (socket.username) {
             activeUsers.delete(socket.username);
             console.log(`${socket.username} hattan düştü.`);
+            broadcastActiveUsers();
         } else {
             console.log('Biri hattan düştü.');
         }
