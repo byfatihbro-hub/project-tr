@@ -9,15 +9,20 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const activeUsers = new Map();
+const userProfiles = new Map(); // KİMİN HANGİ FOTOĞRAFI VAR BURADA TUTUYORUZ (username -> avatarUrl)
 
 // GRUP AYARLARI VE YÖNETİCİ LİSTESİ
 let groupSettings = {
-    icon: 'https://cdn-icons-png.flaticon.com/512/882/882747.png', // Varsayılan grup resmi (araba filan)
+    icon: 'https://cdn-icons-png.flaticon.com/512/882/882747.png', // Varsayılan grup resmi
     admins: ['Fatih', 'fatih'] // Kurucu yönetici sensin kanka!
 };
 
+// Aktif kullanıcıları profil fotoğraflarıyla birlikte herkese yayınla
 function broadcastActiveUsers() {
-    const users = Array.from(activeUsers.keys());
+    const users = Array.from(activeUsers.keys()).map(u => ({
+        username: u,
+        avatar: userProfiles.get(u) || ''
+    }));
     io.emit('active_users', users);
 }
 
@@ -33,7 +38,16 @@ io.on('connection', async (socket) => {
     // Giriş yapana güncel grup bilgilerini gönder
     socket.emit('group_settings', groupSettings);
 
-    socket.on('set-username', (username, callback) => {
+    socket.on('set-username', (data, callback) => {
+        let username, avatar;
+        if (typeof data === 'object') {
+            username = data.username;
+            avatar = data.avatar || '';
+        } else {
+            username = data;
+            avatar = '';
+        }
+
         if (!username || username.trim() === '') {
             return callback({ success: false, message: "Geçersiz isim kanka!" });
         }
@@ -56,10 +70,19 @@ io.on('connection', async (socket) => {
         }
 
         activeUsers.set(cleanUser, socket.id);
+        userProfiles.set(cleanUser, avatar);
         socket.username = cleanUser;
         callback({ success: true });
         
         broadcastActiveUsers();
+    });
+
+    // Kullanıcı profil resmini güncellediğinde
+    socket.on('update_avatar', (avatarUrl) => {
+        if (socket.username) {
+            userProfiles.set(socket.username, avatarUrl);
+            broadcastActiveUsers();
+        }
     });
 
     // Grup fotoğrafı değiştirme yetkisi (Sadece adminler)
@@ -92,7 +115,11 @@ io.on('connection', async (socket) => {
                 text: data.text
             });
             await newMessage.save();
-            io.emit('chat message', newMessage);
+
+            // Mesajı anlık dağıtırken adamın anlık profil resmini de iliştirelim
+            const msgObj = newMessage.toObject();
+            msgObj.avatar = userProfiles.get(data.user) || '';
+            io.emit('chat message', msgObj);
         } catch (err) {
             console.error('Mesaj kaydedilemedi:', err);
         }
