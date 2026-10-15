@@ -9,15 +9,13 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const activeUsers = new Map();
-const userProfiles = new Map(); // KİMİN HANGİ FOTOĞRAFI VAR BURADA TUTUYORUZ (username -> avatarUrl)
+const userProfiles = new Map(); 
 
-// GRUP AYARLARI VE YÖNETİCİ LİSTESİ
 let groupSettings = {
-    icon: 'https://cdn-icons-png.flaticon.com/512/882/882747.png', // Varsayılan grup resmi
-    admins: ['Fatih', 'fatih'] // Kurucu yönetici sensin kanka!
+    icon: 'https://cdn-icons-png.flaticon.com/512/882/882747.png',
+    admins: ['Fatih', 'fatih']
 };
 
-// Aktif kullanıcıları profil fotoğraflarıyla birlikte herkese yayınla
 function broadcastActiveUsers() {
     const users = Array.from(activeUsers.keys()).map(u => ({
         username: u,
@@ -34,8 +32,6 @@ app.use(express.static('public'));
 
 io.on('connection', async (socket) => {
     console.log('Project TR hattına bağlandılar! 🚗');
-
-    // Giriş yapana güncel grup bilgilerini gönder
     socket.emit('group_settings', groupSettings);
 
     socket.on('set-username', (data, callback) => {
@@ -48,36 +44,28 @@ io.on('connection', async (socket) => {
             avatar = '';
         }
 
-        if (!username || username.trim() === '') {
-            return callback({ success: false, message: "Geçersiz isim kanka!" });
-        }
-        
+        if (!username || username.trim() === '') return callback({ success: false, message: "Geçersiz isim kanka!" });
         const cleanUser = username.trim();
         
         if (activeUsers.has(cleanUser)) {
-            const existingSocketId = activeUsers.get(cleanUser);
-            if (io.sockets.sockets.has(existingSocketId)) {
-                return callback({ success: false, message: "Bu isim şu an başka bir cihazda aktif kullanılıyor kanka!" });
+            if (io.sockets.sockets.has(activeUsers.get(cleanUser))) {
+                return callback({ success: false, message: "Bu isim asılı kalmış olabilir, tekrar deneniyor..." });
             } else {
                 activeUsers.delete(cleanUser);
             }
         }
 
         for (let [user, sId] of activeUsers.entries()) {
-            if (sId === socket.id) {
-                activeUsers.delete(user);
-            }
+            if (sId === socket.id) activeUsers.delete(user);
         }
 
         activeUsers.set(cleanUser, socket.id);
         userProfiles.set(cleanUser, avatar);
         socket.username = cleanUser;
         callback({ success: true });
-        
         broadcastActiveUsers();
     });
 
-    // Kullanıcı profil resmini güncellediğinde
     socket.on('update_avatar', (avatarUrl) => {
         if (socket.username) {
             userProfiles.set(socket.username, avatarUrl);
@@ -85,24 +73,35 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // Grup fotoğrafı değiştirme yetkisi (Sadece adminler)
     socket.on('change_group_icon', (newUrl) => {
         if (groupSettings.admins.includes(socket.username)) {
             groupSettings.icon = newUrl;
-            io.emit('group_settings', groupSettings); // Herkese yeni resmi yolla
+            io.emit('group_settings', groupSettings);
         }
     });
 
-    // Başkasını yönetici yapma yetkisi (Sadece adminler)
     socket.on('make_admin', (targetUser) => {
         if (groupSettings.admins.includes(socket.username) && !groupSettings.admins.includes(targetUser)) {
             groupSettings.admins.push(targetUser);
-            io.emit('group_settings', groupSettings); // Herkese yeni admin listesini yolla
+            io.emit('group_settings', groupSettings);
+        }
+    });
+
+    socket.on('toggle_pin', async (msgId) => {
+        if (groupSettings.admins.includes(socket.username)) {
+            try {
+                const msg = await Message.findById(msgId);
+                if (msg) {
+                    msg.pinned = !msg.pinned;
+                    await msg.save();
+                    io.emit('pinned_updated', msg); 
+                }
+            } catch (err) { console.error('Sabitleme hatası:', err); }
         }
     });
 
     try {
-        const previousMessages = await Message.find().sort({ timestamp: 1 }).limit(50);
+        const previousMessages = await Message.find().sort({ timestamp: 1 }).limit(100);
         socket.emit('init_messages', previousMessages);
     } catch (err) {
         console.error('Geçmiş mesajlar yüklenemedi:', err);
@@ -112,29 +111,9 @@ io.on('connection', async (socket) => {
         try {
             const newMessage = new Message({
                 user: data.user,
-                text: data.text
+                text: data.text,
+                avatar: userProfiles.get(data.user) || '',
+                pinned: false
             });
             await newMessage.save();
-
-            // Mesajı anlık dağıtırken adamın anlık profil resmini de iliştirelim
-            const msgObj = newMessage.toObject();
-            msgObj.avatar = userProfiles.get(data.user) || '';
-            io.emit('chat message', msgObj);
-        } catch (err) {
-            console.error('Mesaj kaydedilemedi:', err);
-        }
-    });
-
-    socket.on('disconnect', () => {
-        if (socket.username) {
-            activeUsers.delete(socket.username);
-            console.log(`${socket.username} hattan düştü.`);
-            broadcastActiveUsers();
-        }
-    });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Sunucu ayakta! Port: ${PORT}`);
-});
+            io.emit('chat message', newMessage);
