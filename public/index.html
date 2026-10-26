@@ -67,9 +67,9 @@
         .admin-badge { background: #ff4757; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
         .make-admin-btn { background: #4facfe; border: none; color: white; font-size: 10px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
         
-        /* Özel Ses Oynatıcı Tasarımı */
         audio { height: 35px; max-width: 100%; border-radius: 8px; margin-top: 5px; }
         .recording-pulse { animation: pulse 1s infinite; background: rgba(255, 71, 87, 0.8) !important; color: white !important; }
+        .stt-active { background: rgba(46, 204, 113, 0.8) !important; color: white !important; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
@@ -124,7 +124,9 @@
 
                 <div class="input-row">
                     <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." autocomplete="off" />
-                    <!-- BASILI TUT KAYDET BUTONU -->
+                    <!-- SESİ METNE ÇEVİRME BUTONU (STT) -->
+                    <button type="button" id="sttBtn" class="aero-btn" style="padding: 0 12px; font-size: 16px;" title="Konuşmayı Metne Çevir">🗣️ Yazı</button>
+                    <!-- SES KAYIT BUTONU -->
                     <button type="button" id="micBtn" class="aero-btn" style="padding: 0 15px; font-size: 18px;" title="Basılı Tutarak Ses Kaydet">🎙️</button>
                     <button class="aero-btn" type="submit">Gönder</button>
                 </div>
@@ -184,7 +186,6 @@
         let pinnedMessages = new Map(); 
         let currentReplyData = null;
 
-        // Sesli mesaj değişkenleri
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
@@ -374,7 +375,6 @@
             }
         });
 
-        // MESAJ GÖNDERME
         form.addEventListener('submit', function(e) {
             e.preventDefault(); 
             mentionDropdown.style.display = 'none';
@@ -391,7 +391,7 @@
             }
         });
 
-        // 🎙️ SESLİ MESAJ (MediaRecorder API) İŞLEMLERİ 
+        // 🎙️ GÜNCELLENMİŞ STABİL SESLİ MESAJ (MediaRecorder) İŞLEMLERİ
         const micBtn = document.getElementById('micBtn');
 
         async function startRecording(e) {
@@ -399,15 +399,26 @@
             if (isRecording) return;
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                
+                // Desteklenen en iyi ses formatını seç (Safari/Chrome uyumluluğu için)
+                let options = { mimeType: 'audio/webm' };
+                if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        options = { mimeType: 'audio/mp4' };
+                    } else {
+                        options = {}; // Tarayıcı kendi varsayılanını seçsin
+                    }
+                }
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                audioChunks = [];
                 
                 mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
                 
                 mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    audioChunks = [];
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
                     
-                    if (audioBlob.size > 1000) { // Çok kısa değilse gönder
+                    if (audioBlob.size > 500) {
                         const reader = new FileReader();
                         reader.readAsDataURL(audioBlob);
                         reader.onloadend = () => {
@@ -416,13 +427,12 @@
                                 user: myUsername, 
                                 text: "🎙️ Sesli Mesaj",
                                 replyTo: currentReplyData,
-                                audioBase64: base64Audio // Sesi sunucuya yolluyoruz
+                                audioBase64: base64Audio 
                             });
                             currentReplyData = null;
                             document.getElementById('replyPreview').classList.add('hidden');
                         };
                     }
-                    // Mikrofon iznini/donanımını serbest bırak
                     stream.getTracks().forEach(track => track.stop());
                 };
 
@@ -451,9 +461,54 @@
 
         micBtn.addEventListener('mousedown', startRecording);
         micBtn.addEventListener('mouseup', stopRecording);
-        micBtn.addEventListener('mouseleave', stopRecording); // Basılı tutup dışarı çıkarsa da bitir
+        micBtn.addEventListener('mouseleave', stopRecording);
         micBtn.addEventListener('touchstart', startRecording, {passive: false});
         micBtn.addEventListener('touchend', stopRecording, {passive: false});
+
+
+        // 🗣️ KONUŞMAYI METNE ÇEVİRME (Speech-to-Text) ÖZELLİĞİ
+        const sttBtn = document.getElementById('sttBtn');
+        let recognition = null;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'tr-TR';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            sttBtn.onclick = () => {
+                try {
+                    recognition.start();
+                    sttBtn.classList.add('stt-active');
+                    messageInput.placeholder = "🗣️ Dinleniyor, konuşmaya başla...";
+                } catch(err) {
+                    recognition.stop();
+                }
+            };
+
+            recognition.onresult = (event) => {
+                const speechResult = event.results[0][0].transcript;
+                messageInput.value = messageInput.value ? messageInput.value + " " + speechResult : speechResult;
+                messageInput.focus();
+            };
+
+            recognition.onspeechend = () => {
+                recognition.stop();
+            };
+
+            recognition.onerror = () => {
+                sttBtn.classList.remove('stt-active');
+                messageInput.placeholder = "Mesajını yaz veya @etiketle...";
+            };
+
+            recognition.onend = () => {
+                sttBtn.classList.remove('stt-active');
+                messageInput.placeholder = "Mesajını yaz veya @etiketle...";
+            };
+        } else {
+            sttBtn.onclick = () => { alert("Tarayıcın konuşmayı metne çevirme özelliğini desteklemiyor kanka."); };
+        }
 
 
         socket.on('chat message', function(msg) {
@@ -572,7 +627,6 @@
                 formattedText = formattedText.replace(new RegExp(`@${myUsername}`, 'g'), `<span class="mention-tag">@${myUsername}</span>`);
             }
 
-            // SESLİ MESAJ RENDER İŞLEMİ
             let audioHtml = '';
             if (msg.audioBase64) {
                 audioHtml = `<br><audio controls src="${msg.audioBase64}"></audio>`;
