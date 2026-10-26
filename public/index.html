@@ -52,7 +52,7 @@
         .msg-options-menu {
             position: absolute; right: 0; top: 100%; background: #2a2f32; border: 1px solid rgba(255,255,255,0.1);
             border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none; flex-direction: column;
-            z-index: 100; min-width: 130px; overflow: hidden;
+            z-index: 100; min-width: 140px; overflow: hidden;
         }
         .msg-options-menu button {
             background: none; border: none; color: #fff; padding: 10px; text-align: left; cursor: pointer;
@@ -99,7 +99,7 @@
         .mention-item:hover { background: #3b4043; }
         .action-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         
-        #groupInfoOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        #groupInfoOverlay, #pinnedMessagesOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         .group-info-modal { background: rgba(25, 30, 40, 0.95); width: 90%; max-width: 350px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); max-height: 85vh; overflow-y: auto; position: relative; }
         .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 24px; cursor: pointer; }
         .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
@@ -138,9 +138,9 @@
                 </div>
             </div>
 
-            <div id="pinnedBar" class="hidden" onclick="scrollToPinned()">
-                <div style="font-weight: bold; color: #ffeb3b; font-size: 11px; margin-bottom: 2px;">📌 Sabitlenmiş Mesaj</div>
-                <div id="pinnedContent" style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+            <!-- SABİTLENMİŞ MESAJ BARI (Tıklayınca Yönetim Menüsü Açar) -->
+            <div id="pinnedBar" class="hidden" onclick="openPinnedModal()">
+                <div id="pinnedContent"></div>
             </div>
             
             <div id="chat" class="glass-box"></div>
@@ -163,6 +163,7 @@
             </form>
         </div>
 
+        <!-- GRUP BİLGİSİ EKRANI -->
         <div id="groupInfoOverlay" class="hidden">
             <div class="group-info-modal">
                 <button class="close-btn" onclick="closeGroupInfo()">×</button>
@@ -193,22 +194,30 @@
                 <div id="participantsList" style="display: flex; flex-direction: column; gap: 5px;"></div>
             </div>
         </div>
+
+        <!-- SABİTLENMİŞ MESAJLARIN LİSTELENDİĞİ YENİ YÖNETİM MODALI -->
+        <div id="pinnedMessagesOverlay" class="hidden">
+            <div class="group-info-modal">
+                <button class="close-btn" onclick="closePinnedModal()">×</button>
+                <h3 style="margin: 0 0 15px 0; text-align: center; color: #ffeb3b; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">📌 Sabitlenenler</h3>
+                <div id="pinnedMessagesList" style="display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; padding-right: 5px;"></div>
+            </div>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SECRET_PIN = "1992";
         
-        // F5 ATINCA SOLA KAYMA SORUNU BURADA ÇÖZÜLDÜ: Sayfa yüklenir yüklenmez nickin hafızadan alınıyor.
         let myUsername = localStorage.getItem('project_tr_username') || ''; 
-        
         let myAvatar = localStorage.getItem('project_tr_avatar') || '';
         let notificationsEnabled = false;
         let allKnownUsers = new Set();
         let knownProfiles = {}; 
         let currentGroupSettings = { icon: '', admins: [] };
+        
+        // Sabitlenmiş mesajları hafızada tutan sistem
         let pinnedMessages = new Map(); 
-        let currentPinnedId = null;
         let currentReplyData = null;
 
         const socket = io();
@@ -388,10 +397,11 @@
             } else mentionDropdown.style.display = 'none';
         });
 
-        // Üç nokta menüsünü veya profil/etiket menülerini dışa tıklayınca kapatma
+        // Üç nokta menüsünü veya modalları dışa tıklayınca kapatma
         document.addEventListener('click', (e) => {
             if (!mentionDropdown.contains(e.target) && e.target !== messageInput) mentionDropdown.style.display = 'none';
             if (e.target === document.getElementById('groupInfoOverlay')) closeGroupInfo();
+            if (e.target === document.getElementById('pinnedMessagesOverlay')) closePinnedModal();
             
             if (!e.target.classList.contains('msg-options-btn')) {
                 document.querySelectorAll('.msg-options-menu').forEach(menu => {
@@ -423,7 +433,6 @@
             displayMessage(msg);
             
             if (msg.user !== myUsername) {
-                // Etiketlenince veya Biri Mesajına Yanıt Verince (BİLDİRİM KONTROLÜ EKLENDİ)
                 const isMentioned = myUsername && msg.text.includes(`@${myUsername}`);
                 const isReplied = msg.replyTo && msg.replyTo.user === myUsername;
 
@@ -447,34 +456,88 @@
                 if(msgEl) msgEl.classList.remove('is-pinned');
             }
             updatePinnedBar();
+            // Sabitleme listesi açıksa onu da anında güncelle
+            if(!document.getElementById('pinnedMessagesOverlay').classList.contains('hidden')) {
+                openPinnedModal();
+            }
         });
 
         function togglePin(msgId) { socket.emit('toggle_pin', msgId); }
 
+        // SABİTLENMİŞ MESAJ BARI GÜNCELLEME (Çoklu Mesaj Algılama)
         function updatePinnedBar() {
+            const bar = document.getElementById('pinnedBar');
+            const content = document.getElementById('pinnedContent');
+            
             if (pinnedMessages.size > 0) {
-                const lastPinned = Array.from(pinnedMessages.values()).pop();
-                document.getElementById('pinnedBar').classList.remove('hidden');
-                document.getElementById('pinnedContent').textContent = `${lastPinned.user}: ${lastPinned.text}`;
-                currentPinnedId = lastPinned._id;
-            } else {
-                document.getElementById('pinnedBar').classList.add('hidden');
-                currentPinnedId = null;
-            }
-        }
-
-        function scrollToPinned() {
-            if (currentPinnedId) {
-                const el = document.getElementById('msg-' + currentPinnedId);
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    el.style.background = 'rgba(255, 235, 59, 0.4)';
-                    setTimeout(() => { el.style.background = ''; }, 1500);
+                bar.classList.remove('hidden');
+                if (pinnedMessages.size === 1) {
+                    const lastPinned = Array.from(pinnedMessages.values())[0];
+                    content.innerHTML = `<div style="font-weight: bold; color: #ffeb3b; font-size: 11px; margin-bottom: 2px;">📌 Sabitlenmiş Mesaj</div><div style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(lastPinned.user)}: ${escapeHtml(lastPinned.text)}</div>`;
+                } else {
+                    content.innerHTML = `<div style="font-weight: bold; color: #ffeb3b; font-size: 11px; margin-bottom: 2px;">📌 ${pinnedMessages.size} Sabitlenmiş Mesaj</div><div style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mesajları görmek ve yönetmek için tıkla</div>`;
                 }
+            } else {
+                bar.classList.add('hidden');
             }
         }
 
-        // Üç Nokta Menüsünü Açma/Kapama Fonksiyonu
+        // TÜM SABİTLENEN MESAJLARI GÖSTEREN MODAL
+        function openPinnedModal() {
+            const list = document.getElementById('pinnedMessagesList');
+            list.innerHTML = '';
+            const amIAdmin = currentGroupSettings.admins.includes(myUsername);
+
+            if (pinnedMessages.size === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#aaa; font-size:13px;">Sabitlenmiş mesaj yok.</p>';
+            } else {
+                // En son sabitlenen en üstte çıksın diye tersine çevirdik
+                const pins = Array.from(pinnedMessages.values()).reverse(); 
+                
+                pins.forEach(msg => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; border-left: 4px solid #ffeb3b;';
+                    
+                    const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    let html = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <strong style="color: #00f2fe; font-size: 12px;">${escapeHtml(msg.user)}</strong>
+                            <span style="font-size: 10px; color: #aaa;">${timeStr}</span>
+                        </div>
+                        <div style="font-size: 13px; color: #fff; margin-bottom: 10px; word-break: break-word;">${escapeHtml(msg.text)}</div>
+                        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                            <button class="aero-btn" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="closePinnedModal(); scrollToMessage('${msg._id}')">Mesaja Git</button>
+                    `;
+                    
+                    // Sadece yönetici "Sabiti Kaldır" diyebilsin (Tıpkı üç noktadaki gibi)
+                    if (amIAdmin) {
+                        html += `<button style="background: rgba(255, 71, 87, 0.8); color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;" onclick="togglePin('${msg._id}')">Sabiti Kaldır</button>`;
+                    }
+                    
+                    html += `</div>`;
+                    item.innerHTML = html;
+                    list.appendChild(item);
+                });
+            }
+            
+            document.getElementById('pinnedMessagesOverlay').classList.remove('hidden');
+        }
+
+        function closePinnedModal() {
+            document.getElementById('pinnedMessagesOverlay').classList.add('hidden');
+        }
+
+        // Mesaja Scroll Yapma Fonksiyonu
+        function scrollToMessage(id) {
+            const el = document.getElementById('msg-' + id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.background = 'rgba(255, 235, 59, 0.4)';
+                setTimeout(() => { el.style.background = ''; }, 1500);
+            }
+        }
+
         function toggleMsgOptions(btn, event) {
             event.stopPropagation();
             document.querySelectorAll('.msg-options-menu').forEach(menu => {
@@ -487,7 +550,6 @@
         function displayMessage(msg) {
             const row = document.createElement('div');
             
-            // F5 atsanda çalışacak sağ/sol kontrolü
             const isOutgoing = msg.user === myUsername;
             row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
 
@@ -517,6 +579,8 @@
             
             // ÜÇ NOKTA (⋮) MENÜSÜ EKLENDİ
             const replyAction = `<button type="button" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬 Yanıtla</button>`;
+            
+            // Yöneticiler (veya eski kodu korumak için) her mesajdan sabitleme işlemi yapabilir
             const pinAction = amIAdmin && msg._id ? `<button type="button" onclick="togglePin('${msg._id}')">${msg.pinned ? '📍 Sabiti Kaldır' : '📌 Sabitle'}</button>` : '';
             
             const optionsMenuHtml = `
@@ -564,7 +628,6 @@
             document.getElementById('replyPreview').classList.remove('hidden');
             document.getElementById('messageInput').focus();
             
-            // Menüyü kapat
             document.querySelectorAll('.msg-options-menu').forEach(menu => menu.classList.remove('show-menu'));
         }
 
