@@ -13,8 +13,9 @@
         .glass-box { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37); border-radius: 12px; padding: 15px; }
         .center-screen { position: absolute; width: 90%; max-width: 400px; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; text-align: center; z-index: 100; }
         .center-screen input, .center-screen button { padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.5); background: rgba(0, 0, 0, 0.3); color: #fff; width: 220px; text-align: center; outline: none; }
-        .aero-btn { background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); border: 1px solid #ffffff; color: #fff; font-weight: bold; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2); text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
+        .aero-btn { background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); border: 1px solid #ffffff; color: #fff; font-weight: bold; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2); text-shadow: 0 1px 1px rgba(0,0,0,0.3); transition: 0.2s; }
         .aero-btn:hover { background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%); }
+        .aero-btn:active { transform: scale(0.95); }
         
         #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; position: relative; }
         .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 5px; cursor: pointer; border-radius: 8px; transition: background 0.2s; }
@@ -26,72 +27,32 @@
 
         #chat { flex: 1; border-radius: 10px; padding: 12px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
         
-        /* WhatsApp Tarzı Sağ / Sol Balon Düzeni */
         .message-row { display: flex; width: 100%; margin-bottom: 4px; }
         .message-row.incoming { justify-content: flex-start; }
         .message-row.outgoing { justify-content: flex-end; }
 
-        .message { 
-            background: rgba(255, 255, 255, 0.25); 
-            padding: 10px 14px; 
-            border-radius: 12px; 
-            max-width: 75%; 
-            word-break: break-word; 
-            border: 1px solid rgba(255,255,255,0.2); 
-            position: relative; 
-        }
+        .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); position: relative; }
         .message-row.outgoing .message { background: rgba(0, 180, 216, 0.35); border-color: rgba(0, 242, 254, 0.4); }
-        
         .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; box-shadow: 0 0 10px rgba(255,193,7,0.4); }
         .message.is-pinned { border-color: #ffeb3b !important; box-shadow: 0 0 8px rgba(255,235,59,0.4); }
         
-        /* Üç Nokta Menüsü (Message Options) */
         .msg-options-container { position: relative; display: inline-block; margin-left: 5px; }
         .msg-options-btn { background: none; border: none; color: #fff; cursor: pointer; opacity: 0.6; padding: 0 4px; font-size: 16px; font-weight: bold; transition: opacity 0.2s; }
         .msg-options-btn:hover { opacity: 1; }
-        .msg-options-menu {
-            position: absolute; right: 0; top: 100%; background: #2a2f32; border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none; flex-direction: column;
-            z-index: 100; min-width: 140px; overflow: hidden;
-        }
-        .msg-options-menu button {
-            background: none; border: none; color: #fff; padding: 10px; text-align: left; cursor: pointer;
-            font-size: 13px; width: 100%; transition: background 0.2s;
-        }
+        .msg-options-menu { position: absolute; right: 0; top: 100%; background: #2a2f32; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none; flex-direction: column; z-index: 100; min-width: 140px; overflow: hidden; }
+        .msg-options-menu button { background: none; border: none; color: #fff; padding: 10px; text-align: left; cursor: pointer; font-size: 13px; width: 100%; transition: background 0.2s; }
         .msg-options-menu button:hover { background: rgba(255,255,255,0.1); }
         .show-menu { display: flex !important; }
 
-        /* Alıntı Kutusu */
-        .quoted-box {
-            background: rgba(0, 0, 0, 0.25);
-            border-left: 4px solid #00f2fe;
-            padding: 6px 10px;
-            margin-bottom: 6px;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        .quoted-box .q-user {
-            font-weight: bold;
-            color: #d1f8ff;
-            font-size: 12px;
-            margin-bottom: 2px;
-        }
+        .quoted-box { background: rgba(0, 0, 0, 0.25); border-left: 4px solid #00f2fe; padding: 6px 10px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; }
+        .quoted-box .q-user { font-weight: bold; color: #d1f8ff; font-size: 12px; margin-bottom: 2px; }
 
         .form-group { position: relative; display: flex; flex-direction: column; gap: 8px; }
-        .input-row { display: flex; gap: 8px; position: relative; width: 100%; }
+        .input-row { display: flex; gap: 8px; position: relative; width: 100%; align-items: stretch; }
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
         #messageInput { flex: 1; }
         
-        #replyPreview {
-            background: rgba(0, 0, 0, 0.3);
-            border-left: 4px solid #00f2fe;
-            padding: 8px 12px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 13px;
-        }
+        #replyPreview { background: rgba(0, 0, 0, 0.3); border-left: 4px solid #00f2fe; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
         #cancelReply { background: none; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 18px; padding: 0 5px; }
 
         .mention-menu { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 250px; background: #2a2f32; border-radius: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.4); display: none; flex-direction: column; z-index: 1000; overflow-y: auto; max-height: 200px; border: 1px solid rgba(255,255,255,0.1); }
@@ -105,6 +66,11 @@
         .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .admin-badge { background: #ff4757; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
         .make-admin-btn { background: #4facfe; border: none; color: white; font-size: 10px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+        
+        /* Özel Ses Oynatıcı Tasarımı */
+        audio { height: 35px; max-width: 100%; border-radius: 8px; margin-top: 5px; }
+        .recording-pulse { animation: pulse 1s infinite; background: rgba(255, 71, 87, 0.8) !important; color: white !important; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -134,11 +100,11 @@
                     </div>
                 </div>
                 <div class="header-buttons" onclick="event.stopPropagation();">
+                    <button class="action-btn" onclick="alert('📞 Sesli görüşme (WebRTC) özelliği sunucu tarafında henüz geliştirilme aşamasındadır.')">📞</button>
                     <button id="notifBtn" class="action-btn" onclick="toggleNotifications()">🔔</button>
                 </div>
             </div>
 
-            <!-- SABİTLENMİŞ MESAJ BARI (Tıklayınca Yönetim Menüsü Açar) -->
             <div id="pinnedBar" class="hidden" onclick="openPinnedModal()">
                 <div id="pinnedContent"></div>
             </div>
@@ -157,13 +123,14 @@
                 </div>
 
                 <div class="input-row">
-                    <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
+                    <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." autocomplete="off" />
+                    <!-- BASILI TUT KAYDET BUTONU -->
+                    <button type="button" id="micBtn" class="aero-btn" style="padding: 0 15px; font-size: 18px;" title="Basılı Tutarak Ses Kaydet">🎙️</button>
                     <button class="aero-btn" type="submit">Gönder</button>
                 </div>
             </form>
         </div>
 
-        <!-- GRUP BİLGİSİ EKRANI -->
         <div id="groupInfoOverlay" class="hidden">
             <div class="group-info-modal">
                 <button class="close-btn" onclick="closeGroupInfo()">×</button>
@@ -195,7 +162,6 @@
             </div>
         </div>
 
-        <!-- SABİTLENMİŞ MESAJLARIN LİSTELENDİĞİ YENİ YÖNETİM MODALI -->
         <div id="pinnedMessagesOverlay" class="hidden">
             <div class="group-info-modal">
                 <button class="close-btn" onclick="closePinnedModal()">×</button>
@@ -215,10 +181,13 @@
         let allKnownUsers = new Set();
         let knownProfiles = {}; 
         let currentGroupSettings = { icon: '', admins: [] };
-        
-        // Sabitlenmiş mesajları hafızada tutan sistem
         let pinnedMessages = new Map(); 
         let currentReplyData = null;
+
+        // Sesli mesaj değişkenleri
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
 
         const socket = io();
         const standardSound = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
@@ -272,9 +241,7 @@
                 alert("Tebrikler kanka, artık Yöneticisin!");
                 document.getElementById('adminPinInput').value = '';
                 setTimeout(openGroupInfo, 300);
-            } else {
-                alert("Hatalı yönetici şifresi kanka!");
-            }
+            } else { alert("Hatalı yönetici şifresi kanka!"); }
         }
 
         function makeAdmin(targetUser) { if(confirm(`${targetUser} adlı kişiyi Yönetici yapmak istiyor musun?`)) socket.emit('make_admin', targetUser); }
@@ -397,19 +364,17 @@
             } else mentionDropdown.style.display = 'none';
         });
 
-        // Üç nokta menüsünü veya modalları dışa tıklayınca kapatma
         document.addEventListener('click', (e) => {
             if (!mentionDropdown.contains(e.target) && e.target !== messageInput) mentionDropdown.style.display = 'none';
             if (e.target === document.getElementById('groupInfoOverlay')) closeGroupInfo();
             if (e.target === document.getElementById('pinnedMessagesOverlay')) closePinnedModal();
             
             if (!e.target.classList.contains('msg-options-btn')) {
-                document.querySelectorAll('.msg-options-menu').forEach(menu => {
-                    menu.classList.remove('show-menu');
-                });
+                document.querySelectorAll('.msg-options-menu').forEach(menu => { menu.classList.remove('show-menu'); });
             }
         });
 
+        // MESAJ GÖNDERME
         form.addEventListener('submit', function(e) {
             e.preventDefault(); 
             mentionDropdown.style.display = 'none';
@@ -425,6 +390,71 @@
                 document.getElementById('replyPreview').classList.add('hidden');
             }
         });
+
+        // 🎙️ SESLİ MESAJ (MediaRecorder API) İŞLEMLERİ 
+        const micBtn = document.getElementById('micBtn');
+
+        async function startRecording(e) {
+            e.preventDefault();
+            if (isRecording) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    audioChunks = [];
+                    
+                    if (audioBlob.size > 1000) { // Çok kısa değilse gönder
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result;
+                            socket.emit('chat message', { 
+                                user: myUsername, 
+                                text: "🎙️ Sesli Mesaj",
+                                replyTo: currentReplyData,
+                                audioBase64: base64Audio // Sesi sunucuya yolluyoruz
+                            });
+                            currentReplyData = null;
+                            document.getElementById('replyPreview').classList.add('hidden');
+                        };
+                    }
+                    // Mikrofon iznini/donanımını serbest bırak
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('recording-pulse');
+                messageInput.placeholder = "🔴 Ses kaydediliyor... Bırakınca gönderir.";
+                messageInput.disabled = true;
+                
+            } catch (err) {
+                alert("Mikrofona erişilemedi! Lütfen tarayıcı izinlerini kontrol et.");
+            }
+        }
+
+        function stopRecording(e) {
+            e.preventDefault();
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.classList.remove('recording-pulse');
+                messageInput.placeholder = "Mesajını yaz veya @etiketle...";
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        micBtn.addEventListener('mousedown', startRecording);
+        micBtn.addEventListener('mouseup', stopRecording);
+        micBtn.addEventListener('mouseleave', stopRecording); // Basılı tutup dışarı çıkarsa da bitir
+        micBtn.addEventListener('touchstart', startRecording, {passive: false});
+        micBtn.addEventListener('touchend', stopRecording, {passive: false});
+
 
         socket.on('chat message', function(msg) {
             allKnownUsers.add(msg.user); 
@@ -456,19 +486,14 @@
                 if(msgEl) msgEl.classList.remove('is-pinned');
             }
             updatePinnedBar();
-            // Sabitleme listesi açıksa onu da anında güncelle
-            if(!document.getElementById('pinnedMessagesOverlay').classList.contains('hidden')) {
-                openPinnedModal();
-            }
+            if(!document.getElementById('pinnedMessagesOverlay').classList.contains('hidden')) { openPinnedModal(); }
         });
 
         function togglePin(msgId) { socket.emit('toggle_pin', msgId); }
 
-        // SABİTLENMİŞ MESAJ BARI GÜNCELLEME (Çoklu Mesaj Algılama)
         function updatePinnedBar() {
             const bar = document.getElementById('pinnedBar');
             const content = document.getElementById('pinnedContent');
-            
             if (pinnedMessages.size > 0) {
                 bar.classList.remove('hidden');
                 if (pinnedMessages.size === 1) {
@@ -477,12 +502,9 @@
                 } else {
                     content.innerHTML = `<div style="font-weight: bold; color: #ffeb3b; font-size: 11px; margin-bottom: 2px;">📌 ${pinnedMessages.size} Sabitlenmiş Mesaj</div><div style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mesajları görmek ve yönetmek için tıkla</div>`;
                 }
-            } else {
-                bar.classList.add('hidden');
-            }
+            } else { bar.classList.add('hidden'); }
         }
 
-        // TÜM SABİTLENEN MESAJLARI GÖSTEREN MODAL
         function openPinnedModal() {
             const list = document.getElementById('pinnedMessagesList');
             list.innerHTML = '';
@@ -491,44 +513,33 @@
             if (pinnedMessages.size === 0) {
                 list.innerHTML = '<p style="text-align:center; color:#aaa; font-size:13px;">Sabitlenmiş mesaj yok.</p>';
             } else {
-                // En son sabitlenen en üstte çıksın diye tersine çevirdik
                 const pins = Array.from(pinnedMessages.values()).reverse(); 
-                
                 pins.forEach(msg => {
                     const item = document.createElement('div');
                     item.style.cssText = 'background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; border-left: 4px solid #ffeb3b;';
-                    
                     const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     
-                    let html = `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                            <strong style="color: #00f2fe; font-size: 12px;">${escapeHtml(msg.user)}</strong>
-                            <span style="font-size: 10px; color: #aaa;">${timeStr}</span>
-                        </div>
-                        <div style="font-size: 13px; color: #fff; margin-bottom: 10px; word-break: break-word;">${escapeHtml(msg.text)}</div>
-                        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                            <button class="aero-btn" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="closePinnedModal(); scrollToMessage('${msg._id}')">Mesaja Git</button>
-                    `;
+                    let html = `<div style="display: flex; justify-content: space-between; margin-bottom: 5px;"><strong style="color: #00f2fe; font-size: 12px;">${escapeHtml(msg.user)}</strong><span style="font-size: 10px; color: #aaa;">${timeStr}</span></div>`;
                     
-                    // Sadece yönetici "Sabiti Kaldır" diyebilsin (Tıpkı üç noktadaki gibi)
-                    if (amIAdmin) {
-                        html += `<button style="background: rgba(255, 71, 87, 0.8); color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;" onclick="togglePin('${msg._id}')">Sabiti Kaldır</button>`;
+                    if (msg.audioBase64) {
+                        html += `<audio controls style="max-width:100%; height:30px; margin-bottom:10px;" src="${msg.audioBase64}"></audio>`;
+                    } else {
+                        html += `<div style="font-size: 13px; color: #fff; margin-bottom: 10px; word-break: break-word;">${escapeHtml(msg.text)}</div>`;
                     }
                     
+                    html += `<div style="display: flex; justify-content: flex-end; gap: 8px;"><button class="aero-btn" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="closePinnedModal(); scrollToMessage('${msg._id}')">Mesaja Git</button>`;
+                    if (amIAdmin) { html += `<button style="background: rgba(255, 71, 87, 0.8); color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;" onclick="togglePin('${msg._id}')">Sabiti Kaldır</button>`; }
                     html += `</div>`;
+                    
                     item.innerHTML = html;
                     list.appendChild(item);
                 });
             }
-            
             document.getElementById('pinnedMessagesOverlay').classList.remove('hidden');
         }
 
-        function closePinnedModal() {
-            document.getElementById('pinnedMessagesOverlay').classList.add('hidden');
-        }
+        function closePinnedModal() { document.getElementById('pinnedMessagesOverlay').classList.add('hidden'); }
 
-        // Mesaja Scroll Yapma Fonksiyonu
         function scrollToMessage(id) {
             const el = document.getElementById('msg-' + id);
             if (el) {
@@ -540,16 +551,13 @@
 
         function toggleMsgOptions(btn, event) {
             event.stopPropagation();
-            document.querySelectorAll('.msg-options-menu').forEach(menu => {
-                if (menu !== btn.nextElementSibling) menu.classList.remove('show-menu');
-            });
+            document.querySelectorAll('.msg-options-menu').forEach(menu => { if (menu !== btn.nextElementSibling) menu.classList.remove('show-menu'); });
             const menu = btn.nextElementSibling;
             menu.classList.toggle('show-menu');
         }
 
         function displayMessage(msg) {
             const row = document.createElement('div');
-            
             const isOutgoing = msg.user === myUsername;
             row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
 
@@ -562,6 +570,12 @@
             if (myUsername && msg.text.includes(`@${myUsername}`)) {
                 item.classList.add('mentioned');
                 formattedText = formattedText.replace(new RegExp(`@${myUsername}`, 'g'), `<span class="mention-tag">@${myUsername}</span>`);
+            }
+
+            // SESLİ MESAJ RENDER İŞLEMİ
+            let audioHtml = '';
+            if (msg.audioBase64) {
+                audioHtml = `<br><audio controls src="${msg.audioBase64}"></audio>`;
             }
 
             let replyHtml = '';
@@ -577,10 +591,7 @@
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const amIAdmin = currentGroupSettings.admins.includes(myUsername);
             
-            // ÜÇ NOKTA (⋮) MENÜSÜ EKLENDİ
-            const replyAction = `<button type="button" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬 Yanıtla</button>`;
-            
-            // Yöneticiler (veya eski kodu korumak için) her mesajdan sabitleme işlemi yapabilir
+            const replyAction = `<button type="button" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${msg.audioBase64 ? '🎙️ Sesli Mesaj' : escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬 Yanıtla</button>`;
             const pinAction = amIAdmin && msg._id ? `<button type="button" onclick="togglePin('${msg._id}')">${msg.pinned ? '📍 Sabiti Kaldır' : '📌 Sabitle'}</button>` : '';
             
             const optionsMenuHtml = `
@@ -610,7 +621,7 @@
                             <span class="time" style="margin: 0; font-size: 10px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${optionsMenuHtml}</span>
                         </div>
                         ${replyHtml}
-                        <div style="line-height: 1.4; font-size: 14px;">${formattedText}</div>
+                        <div style="line-height: 1.4; font-size: 14px;">${formattedText} ${audioHtml}</div>
                     </div>
                     ${isOutgoing ? avatarHtml : ''}
                 </div>
@@ -627,7 +638,6 @@
             document.getElementById('replyingToText').textContent = text;
             document.getElementById('replyPreview').classList.remove('hidden');
             document.getElementById('messageInput').focus();
-            
             document.querySelectorAll('.msg-options-menu').forEach(menu => menu.classList.remove('show-menu'));
         }
 
