@@ -45,8 +45,21 @@
         .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; box-shadow: 0 0 10px rgba(255,193,7,0.4); }
         .message.is-pinned { border-color: #ffeb3b !important; box-shadow: 0 0 8px rgba(255,235,59,0.4); }
         
-        .pin-btn, .reply-action-btn { background: none; border: none; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; padding: 0 4px; font-size: 13px; margin-left: 4px; color: #fff; }
-        .pin-btn:hover, .reply-action-btn:hover { opacity: 1; }
+        /* Üç Nokta Menüsü (Message Options) */
+        .msg-options-container { position: relative; display: inline-block; margin-left: 5px; }
+        .msg-options-btn { background: none; border: none; color: #fff; cursor: pointer; opacity: 0.6; padding: 0 4px; font-size: 16px; font-weight: bold; transition: opacity 0.2s; }
+        .msg-options-btn:hover { opacity: 1; }
+        .msg-options-menu {
+            position: absolute; right: 0; top: 100%; background: #2a2f32; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none; flex-direction: column;
+            z-index: 100; min-width: 130px; overflow: hidden;
+        }
+        .msg-options-menu button {
+            background: none; border: none; color: #fff; padding: 10px; text-align: left; cursor: pointer;
+            font-size: 13px; width: 100%; transition: background 0.2s;
+        }
+        .msg-options-menu button:hover { background: rgba(255,255,255,0.1); }
+        .show-menu { display: flex !important; }
 
         /* Alıntı Kutusu */
         .quoted-box {
@@ -185,7 +198,10 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SECRET_PIN = "1992";
-        let myUsername = '';
+        
+        // F5 ATINCA SOLA KAYMA SORUNU BURADA ÇÖZÜLDÜ: Sayfa yüklenir yüklenmez nickin hafızadan alınıyor.
+        let myUsername = localStorage.getItem('project_tr_username') || ''; 
+        
         let myAvatar = localStorage.getItem('project_tr_avatar') || '';
         let notificationsEnabled = false;
         let allKnownUsers = new Set();
@@ -372,9 +388,16 @@
             } else mentionDropdown.style.display = 'none';
         });
 
+        // Üç nokta menüsünü veya profil/etiket menülerini dışa tıklayınca kapatma
         document.addEventListener('click', (e) => {
             if (!mentionDropdown.contains(e.target) && e.target !== messageInput) mentionDropdown.style.display = 'none';
             if (e.target === document.getElementById('groupInfoOverlay')) closeGroupInfo();
+            
+            if (!e.target.classList.contains('msg-options-btn')) {
+                document.querySelectorAll('.msg-options-menu').forEach(menu => {
+                    menu.classList.remove('show-menu');
+                });
+            }
         });
 
         form.addEventListener('submit', function(e) {
@@ -400,9 +423,13 @@
             displayMessage(msg);
             
             if (msg.user !== myUsername) {
-                if (myUsername && msg.text.includes(`@${myUsername}`)) {
+                // Etiketlenince veya Biri Mesajına Yanıt Verince (BİLDİRİM KONTROLÜ EKLENDİ)
+                const isMentioned = myUsername && msg.text.includes(`@${myUsername}`);
+                const isReplied = msg.replyTo && msg.replyTo.user === myUsername;
+
+                if (isMentioned || isReplied) {
                     mentionSound.currentTime = 0; mentionSound.play().catch(()=>{});
-                    try { if (Notification.permission === "granted") new Notification(`@${myUsername} seni etiketledi!`, { body: `${msg.user}: ${msg.text}` }); } catch(e) {}
+                    try { if (Notification.permission === "granted") new Notification(`Sana özel bir mesaj var!`, { body: `${msg.user}: ${msg.text}` }); } catch(e) {}
                 } else if (notificationsEnabled) {
                     standardSound.currentTime = 0; standardSound.play().catch(()=>{});
                     try { if (Notification.permission === "granted") new Notification(`Yeni mesaj: ${msg.user}`, { body: msg.text }); } catch(e) {}
@@ -447,9 +474,20 @@
             }
         }
 
+        // Üç Nokta Menüsünü Açma/Kapama Fonksiyonu
+        function toggleMsgOptions(btn, event) {
+            event.stopPropagation();
+            document.querySelectorAll('.msg-options-menu').forEach(menu => {
+                if (menu !== btn.nextElementSibling) menu.classList.remove('show-menu');
+            });
+            const menu = btn.nextElementSibling;
+            menu.classList.toggle('show-menu');
+        }
+
         function displayMessage(msg) {
             const row = document.createElement('div');
-            // Kendi gönderdiğin mesajları sağa hizala, diğerlerini sola
+            
+            // F5 atsanda çalışacak sağ/sol kontrolü
             const isOutgoing = msg.user === myUsername;
             row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
 
@@ -465,7 +503,6 @@
             }
 
             let replyHtml = '';
-            // Yanıtlanan mesajı ekrana bas
             if (msg.replyTo && msg.replyTo.text) {
                 replyHtml = `
                     <div class="quoted-box">
@@ -478,8 +515,19 @@
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const amIAdmin = currentGroupSettings.admins.includes(myUsername);
             
-            const pinButtonHtml = amIAdmin && msg._id ? `<button class="pin-btn" onclick="togglePin('${msg._id}')" title="Sabitle / Kaldır">${msg.pinned ? '📍' : '📌'}</button>` : '';
-            const replyButtonHtml = `<button class="reply-action-btn" title="Yanıtla" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬</button>`;
+            // ÜÇ NOKTA (⋮) MENÜSÜ EKLENDİ
+            const replyAction = `<button type="button" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬 Yanıtla</button>`;
+            const pinAction = amIAdmin && msg._id ? `<button type="button" onclick="togglePin('${msg._id}')">${msg.pinned ? '📍 Sabiti Kaldır' : '📌 Sabitle'}</button>` : '';
+            
+            const optionsMenuHtml = `
+                <div class="msg-options-container">
+                    <button class="msg-options-btn" onclick="toggleMsgOptions(this, event)">⋮</button>
+                    <div class="msg-options-menu">
+                        ${replyAction}
+                        ${pinAction}
+                    </div>
+                </div>
+            `;
 
             const userAvatar = msg.avatar || knownProfiles[msg.user];
             let avatarHtml = '';
@@ -495,7 +543,7 @@
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 15px;">
                             <span class="username" style="margin: 0; font-weight: bold; font-size: 12px; color: #d1f8ff;">${escapeHtml(msg.user)}</span>
-                            <span class="time" style="margin: 0; font-size: 10px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${replyButtonHtml} ${pinButtonHtml}</span>
+                            <span class="time" style="margin: 0; font-size: 10px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${optionsMenuHtml}</span>
                         </div>
                         ${replyHtml}
                         <div style="line-height: 1.4; font-size: 14px;">${formattedText}</div>
@@ -515,6 +563,9 @@
             document.getElementById('replyingToText').textContent = text;
             document.getElementById('replyPreview').classList.remove('hidden');
             document.getElementById('messageInput').focus();
+            
+            // Menüyü kapat
+            document.querySelectorAll('.msg-options-menu').forEach(menu => menu.classList.remove('show-menu'));
         }
 
         function escapeHtml(text) { 
