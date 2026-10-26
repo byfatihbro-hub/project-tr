@@ -27,10 +27,12 @@ function broadcastActiveUsers() {
 mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
     .then(async () => {
         console.log('MongoDB Atlas bağlantısı başarılı! 🟢');
-        // Sunucu açıldığı an şu ana kadarki tüm eski/çöp mesajları temizle (İstediğin sıfırlama)
+        // Sunucu açıldığında eski mesajların silinmesini istemiyorsan buradaki deleteMany bloğunu kapatabilirsin.
+        // Ancak sabitlenenler her halükarda korunuyor.
         try {
-            await Message.deleteMany({ pinned: { $ne: true } });
-            console.log('Şu ana kadarki eski/çöp mesajlar temizlendi, sadece sabitlenenler bırakıldı! 🧹');
+            // İsteğe bağlı: Sunucu açılışında otomatik temizliği burada devre dışı bıraktık ki mesajlar sen sil diyene kadar dursun.
+            // await Message.deleteMany({ pinned: { $ne: true } });
+            console.log('Mesajlar güvenle yerinde duruyor, silme işlemi yapılmadı! 🧹');
         } catch(e) {}
     })
     .catch(err => console.error('MongoDB bağlantı hatası:', err));
@@ -153,14 +155,11 @@ io.on('connection', async (socket) => {
     });
 });
 
-// 3 günden eski sabitlenmemiş mesajları temizleyen döngü
+// İstediğin gibi mesajların otomatik silinmesini iptal ettik (Süre kontrolünü kaldırdık, sunucu kapansa da açılsa da mesajlar durur, sabitlenenler zaten güvence altında)
 setInterval(async () => {
     try {
-        const threeDaysAgo = new Date(Date.now() - (3 * 24 * 60 * 60 * 1000));
-        await Message.deleteMany({
-            timestamp: { $lt: threeDaysAgo },
-            pinned: { $ne: true }
-        });
+        // İstersen buradaki süreyi çok uzun bir güne (örn: 365 gün) çıkarabilir veya tamamen boş bırakabilirsin.
+        // Şu an sadece sabitlenmeyenler için süreyi uzatıyoruz ki silinmesinler.
     } catch (err) {
         console.error('Otomatik temizleme hatası:', err);
     }
