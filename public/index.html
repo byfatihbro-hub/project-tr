@@ -449,6 +449,7 @@
 
         function displayMessage(msg) {
             const row = document.createElement('div');
+            // Kendi gönderdiğin mesajları sağa hizala, diğerlerini sola
             const isOutgoing = msg.user === myUsername;
             row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
 
@@ -464,6 +465,7 @@
             }
 
             let replyHtml = '';
+            // Yanıtlanan mesajı ekrana bas
             if (msg.replyTo && msg.replyTo.text) {
                 replyHtml = `
                     <div class="quoted-box">
@@ -476,7 +478,6 @@
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const amIAdmin = currentGroupSettings.admins.includes(myUsername);
             
-            // Sabitleme butonu: Adminse görünür, tıklayınca pini açar veya kaldırır (toggle)
             const pinButtonHtml = amIAdmin && msg._id ? `<button class="pin-btn" onclick="togglePin('${msg._id}')" title="Sabitle / Kaldır">${msg.pinned ? '📍' : '📌'}</button>` : '';
             const replyButtonHtml = `<button class="reply-action-btn" title="Yanıtla" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬</button>`;
 
