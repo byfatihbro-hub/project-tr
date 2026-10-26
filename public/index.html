@@ -25,14 +25,30 @@
         #pinnedBar:hover { background: rgba(0, 0, 0, 0.6); }
 
         #chat { flex: 1; border-radius: 10px; padding: 12px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
-        .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 85%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); transition: background 0.5s; position: relative; }
-        .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; box-shadow: 0 0 10px rgba(255,193,7,0.4); }
-        .message.is-pinned { border-color: #ffeb3b; box-shadow: 0 0 8px rgba(255,235,59,0.3); }
         
-        .pin-btn, .reply-action-btn { background: none; border: none; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 0 4px; font-size: 12px; margin-left: 4px; color: #fff; }
+        /* WhatsApp Tarzı Sağ / Sol Balon Düzeni */
+        .message-row { display: flex; width: 100%; margin-bottom: 4px; }
+        .message-row.incoming { justify-content: flex-start; }
+        .message-row.outgoing { justify-content: flex-end; }
+
+        .message { 
+            background: rgba(255, 255, 255, 0.25); 
+            padding: 10px 14px; 
+            border-radius: 12px; 
+            max-width: 75%; 
+            word-break: break-word; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            position: relative; 
+        }
+        .message-row.outgoing .message { background: rgba(0, 180, 216, 0.35); border-color: rgba(0, 242, 254, 0.4); }
+        
+        .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; box-shadow: 0 0 10px rgba(255,193,7,0.4); }
+        .message.is-pinned { border-color: #ffeb3b !important; box-shadow: 0 0 8px rgba(255,235,59,0.4); }
+        
+        .pin-btn, .reply-action-btn { background: none; border: none; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; padding: 0 4px; font-size: 13px; margin-left: 4px; color: #fff; }
         .pin-btn:hover, .reply-action-btn:hover { opacity: 1; }
 
-        /* WhatsApp Tarzı Alıntı (Reply) Kutusu Mesaj İçinde */
+        /* Alıntı Kutusu */
         .quoted-box {
             background: rgba(0, 0, 0, 0.25);
             border-left: 4px solid #00f2fe;
@@ -40,7 +56,6 @@
             margin-bottom: 6px;
             border-radius: 4px;
             font-size: 13px;
-            opacity: 0.95;
         }
         .quoted-box .q-user {
             font-weight: bold;
@@ -54,7 +69,6 @@
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
         #messageInput { flex: 1; }
         
-        /* Aktif Yanıt Önizleme Kutusu (Input Üstünde Çıkan) */
         #replyPreview {
             background: rgba(0, 0, 0, 0.3);
             border-left: 4px solid #00f2fe;
@@ -65,15 +79,7 @@
             align-items: center;
             font-size: 13px;
         }
-        #cancelReply {
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 18px;
-            padding: 0 5px;
-        }
+        #cancelReply { background: none; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 18px; padding: 0 5px; }
 
         .mention-menu { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 250px; background: #2a2f32; border-radius: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.4); display: none; flex-direction: column; z-index: 1000; overflow-y: auto; max-height: 200px; border: 1px solid rgba(255,255,255,0.1); }
         .mention-item { padding: 10px 15px; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
@@ -129,7 +135,6 @@
             <form id="form" class="form-group">
                 <div id="mentionDropdown" class="mention-menu"></div>
                 
-                <!-- Aktif Yanıt Önizleme Alanı (Input Üstü) -->
                 <div id="replyPreview" class="hidden">
                     <div>
                         <strong id="replyingToUser" style="color: #d1f8ff; font-size: 12px; display: block;"></strong>
@@ -188,7 +193,7 @@
         let currentGroupSettings = { icon: '', admins: [] };
         let pinnedMessages = new Map(); 
         let currentPinnedId = null;
-        let currentReplyData = null; // Aktif yanıtlanan mesaj bilgisi
+        let currentReplyData = null;
 
         const socket = io();
         const standardSound = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
@@ -316,7 +321,6 @@
             } else { notificationsEnabled = false; btn.textContent = "🔔"; btn.classList.remove('active'); }
         }
 
-        // Yanıtlamayı İptal Et Butonu
         document.getElementById('cancelReply').addEventListener('click', () => {
             currentReplyData = null;
             document.getElementById('replyPreview').classList.add('hidden');
@@ -332,6 +336,7 @@
 
         socket.on('init_messages', (messages) => {
             chat.innerHTML = '';
+            pinnedMessages.clear();
             messages.forEach(msg => {
                 allKnownUsers.add(msg.user);
                 if(msg.avatar) knownProfiles[msg.user] = msg.avatar;
@@ -377,7 +382,6 @@
             mentionDropdown.style.display = 'none';
             const text = messageInput.value.trim();
             if (text && myUsername) {
-                // Mesaj gönderirken replyTo (alıntı) bilgisini de ekliyoruz
                 socket.emit('chat message', { 
                     user: myUsername, 
                     text: text,
@@ -438,12 +442,16 @@
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     el.style.background = 'rgba(255, 235, 59, 0.4)';
-                    setTimeout(() => { el.style.background = 'rgba(255, 255, 255, 0.25)'; }, 1500);
+                    setTimeout(() => { el.style.background = ''; }, 1500);
                 }
             }
         }
 
         function displayMessage(msg) {
+            const row = document.createElement('div');
+            const isOutgoing = msg.user === myUsername;
+            row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
+
             const item = document.createElement('div');
             item.className = 'message';
             if(msg._id) item.id = 'msg-' + msg._id; 
@@ -455,48 +463,51 @@
                 formattedText = formattedText.replace(new RegExp(`@${myUsername}`, 'g'), `<span class="mention-tag">@${myUsername}</span>`);
             }
 
-            // Alıntı (Reply) HTML yapısı
             let replyHtml = '';
             if (msg.replyTo && msg.replyTo.text) {
                 replyHtml = `
                     <div class="quoted-box">
                         <div class="q-user">${escapeHtml(msg.replyTo.user)}</div>
-                        <div style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${escapeHtml(msg.replyTo.text)}</div>
+                        <div style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">${escapeHtml(msg.replyTo.text)}</div>
                     </div>
                 `;
             }
 
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const amIAdmin = currentGroupSettings.admins.includes(myUsername);
-            const pinButtonHtml = amIAdmin && msg._id ? `<button class="pin-btn" onclick="togglePin('${msg._id}')" title="Sabitle / Kaldır">📌</button>` : '';
-            const replyButtonHtml = `<button class="reply-action-btn" title="Yanıtla" onclick="prepareReply('${msg.user}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬</button>`;
+            
+            // Sabitleme butonu: Adminse görünür, tıklayınca pini açar veya kaldırır (toggle)
+            const pinButtonHtml = amIAdmin && msg._id ? `<button class="pin-btn" onclick="togglePin('${msg._id}')" title="Sabitle / Kaldır">${msg.pinned ? '📍' : '📌'}</button>` : '';
+            const replyButtonHtml = `<button class="reply-action-btn" title="Yanıtla" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬</button>`;
 
             const userAvatar = msg.avatar || knownProfiles[msg.user];
             let avatarHtml = '';
             if (userAvatar) {
-                avatarHtml = `<img src="${escapeHtml(userAvatar)}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">`;
+                avatarHtml = `<img src="${escapeHtml(userAvatar)}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">`;
             } else {
-                avatarHtml = `<div style="width: 35px; height: 35px; border-radius: 50%; background: #00b4d8; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">${msg.user.charAt(0).toUpperCase()}</div>`;
+                avatarHtml = `<div style="width: 32px; height: 32px; border-radius: 50%; background: #00b4d8; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">${msg.user.charAt(0).toUpperCase()}</div>`;
             }
 
             item.innerHTML = `
-                <div style="display: flex; align-items: flex-start; gap: 10px;">
-                    ${avatarHtml}
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                    ${!isOutgoing ? avatarHtml : ''}
                     <div style="flex: 1; min-width: 0;">
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-                            <span class="username" style="margin: 0; font-weight: bold; font-size: 13px; color: #e0f7fc;">${escapeHtml(msg.user)}</span>
-                            <span class="time" style="margin: 0; font-size: 11px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${replyButtonHtml} ${pinButtonHtml}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 15px;">
+                            <span class="username" style="margin: 0; font-weight: bold; font-size: 12px; color: #d1f8ff;">${escapeHtml(msg.user)}</span>
+                            <span class="time" style="margin: 0; font-size: 10px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${replyButtonHtml} ${pinButtonHtml}</span>
                         </div>
                         ${replyHtml}
-                        <div style="line-height: 1.4; font-size: 15px;">${formattedText}</div>
+                        <div style="line-height: 1.4; font-size: 14px;">${formattedText}</div>
                     </div>
+                    ${isOutgoing ? avatarHtml : ''}
                 </div>
             `;
-            chat.appendChild(item);
+            
+            row.appendChild(item);
+            chat.appendChild(row);
             chat.scrollTop = chat.scrollHeight;
         }
 
-        // Yanıtla Butonuna Basıldığında Çalışacak Fonksiyon
         function prepareReply(user, msgId, text) {
             currentReplyData = { user: user, text: text };
             document.getElementById('replyingToUser').textContent = user;
