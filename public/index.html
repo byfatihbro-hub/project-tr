@@ -25,16 +25,56 @@
         #pinnedBar:hover { background: rgba(0, 0, 0, 0.6); }
 
         #chat { flex: 1; border-radius: 10px; padding: 12px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
-        .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 85%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); transition: background 0.5s; }
+        .message { background: rgba(255, 255, 255, 0.25); padding: 10px 14px; border-radius: 8px; width: fit-content; max-width: 85%; word-break: break-word; border: 1px solid rgba(255,255,255,0.2); transition: background 0.5s; position: relative; }
         .message.mentioned { background: rgba(255, 193, 7, 0.35); border-color: #ffc107; box-shadow: 0 0 10px rgba(255,193,7,0.4); }
         .message.is-pinned { border-color: #ffeb3b; box-shadow: 0 0 8px rgba(255,235,59,0.3); }
         
-        .pin-btn { background: none; border: none; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; padding: 0 5px; font-size: 12px; margin-left: 5px; }
-        .pin-btn:hover { opacity: 1; }
+        .pin-btn, .reply-action-btn { background: none; border: none; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; padding: 0 4px; font-size: 12px; margin-left: 4px; color: #fff; }
+        .pin-btn:hover, .reply-action-btn:hover { opacity: 1; }
 
-        .form-group { position: relative; display: flex; gap: 8px; }
+        /* WhatsApp Tarzı Alıntı (Reply) Kutusu Mesaj İçinde */
+        .quoted-box {
+            background: rgba(0, 0, 0, 0.25);
+            border-left: 4px solid #00f2fe;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            opacity: 0.95;
+        }
+        .quoted-box .q-user {
+            font-weight: bold;
+            color: #d1f8ff;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        .form-group { position: relative; display: flex; flex-direction: column; gap: 8px; }
+        .input-row { display: flex; gap: 8px; position: relative; width: 100%; }
         input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
         #messageInput { flex: 1; }
+        
+        /* Aktif Yanıt Önizleme Kutusu (Input Üstünde Çıkan) */
+        #replyPreview {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #00f2fe;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        #cancelReply {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 0 5px;
+        }
+
         .mention-menu { position: absolute; bottom: 100%; left: 0; margin-bottom: 8px; width: 250px; background: #2a2f32; border-radius: 8px; box-shadow: 0 -4px 15px rgba(0,0,0,0.4); display: none; flex-direction: column; z-index: 1000; overflow-y: auto; max-height: 200px; border: 1px solid rgba(255,255,255,0.1); }
         .mention-item { padding: 10px 15px; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
         .mention-item:hover { background: #3b4043; }
@@ -88,8 +128,20 @@
             
             <form id="form" class="form-group">
                 <div id="mentionDropdown" class="mention-menu"></div>
-                <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
-                <button class="aero-btn" type="submit">Gönder</button>
+                
+                <!-- Aktif Yanıt Önizleme Alanı (Input Üstü) -->
+                <div id="replyPreview" class="hidden">
+                    <div>
+                        <strong id="replyingToUser" style="color: #d1f8ff; font-size: 12px; display: block;"></strong>
+                        <span id="replyingToText" style="font-size: 13px; color: #eee;"></span>
+                    </div>
+                    <button type="button" id="cancelReply">&times;</button>
+                </div>
+
+                <div class="input-row">
+                    <input id="messageInput" type="text" placeholder="Mesajını yaz veya @etiketle..." required autocomplete="off" />
+                    <button class="aero-btn" type="submit">Gönder</button>
+                </div>
             </form>
         </div>
 
@@ -107,7 +159,6 @@
                     <button onclick="requestChangeNick()" style="width: 100%; margin-top: 5px; padding: 6px; font-size: 11px; border-radius: 4px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #aaa; cursor: pointer;">Nickimi Değiştir (2 Haftada Bir)</button>
                 </div>
 
-                <!-- YÖNETİCİ ŞİFRESİ BÖLÜMÜ (Buradan şifre girip anında admin olacaksın) -->
                 <div style="background: rgba(255,193,7,0.15); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffc107;">
                     <p style="font-size: 11px; margin: 0 0 5px 0; color: #ffeb3b; font-weight: bold;">🔑 YÖNETİCİ OL</p>
                     <input id="adminPinInput" type="password" placeholder="Yönetici Şifresi..." style="width: 100%; padding: 8px; font-size: 12px; margin-bottom: 5px; border-radius: 4px;">
@@ -137,6 +188,7 @@
         let currentGroupSettings = { icon: '', admins: [] };
         let pinnedMessages = new Map(); 
         let currentPinnedId = null;
+        let currentReplyData = null; // Aktif yanıtlanan mesaj bilgisi
 
         const socket = io();
         const standardSound = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
@@ -183,14 +235,13 @@
         
         function updateGroupIcon() { const url = document.getElementById('newIconUrl').value.trim(); if(url) { socket.emit('change_group_icon', url); document.getElementById('newIconUrl').value = ''; } }
         
-        // Şifre ile yönetici olma fonksiyonu
         function claimAdmin() {
             const pin = document.getElementById('adminPinInput').value.trim();
             if (pin === "1992") {
                 socket.emit('claim_admin', pin);
                 alert("Tebrikler kanka, artık Yöneticisin!");
                 document.getElementById('adminPinInput').value = '';
-                setTimeout(openGroupInfo, 300); // Paneli güncelle
+                setTimeout(openGroupInfo, 300);
             } else {
                 alert("Hatalı yönetici şifresi kanka!");
             }
@@ -265,6 +316,12 @@
             } else { notificationsEnabled = false; btn.textContent = "🔔"; btn.classList.remove('active'); }
         }
 
+        // Yanıtlamayı İptal Et Butonu
+        document.getElementById('cancelReply').addEventListener('click', () => {
+            currentReplyData = null;
+            document.getElementById('replyPreview').classList.add('hidden');
+        });
+
         document.getElementById('pinInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPin(); });
         document.getElementById('nicknameInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') setNickname(); });
 
@@ -320,8 +377,15 @@
             mentionDropdown.style.display = 'none';
             const text = messageInput.value.trim();
             if (text && myUsername) {
-                socket.emit('chat message', { user: myUsername, text: text });
+                // Mesaj gönderirken replyTo (alıntı) bilgisini de ekliyoruz
+                socket.emit('chat message', { 
+                    user: myUsername, 
+                    text: text,
+                    replyTo: currentReplyData 
+                });
                 messageInput.value = '';
+                currentReplyData = null;
+                document.getElementById('replyPreview').classList.add('hidden');
             }
         });
 
@@ -391,9 +455,21 @@
                 formattedText = formattedText.replace(new RegExp(`@${myUsername}`, 'g'), `<span class="mention-tag">@${myUsername}</span>`);
             }
 
+            // Alıntı (Reply) HTML yapısı
+            let replyHtml = '';
+            if (msg.replyTo && msg.replyTo.text) {
+                replyHtml = `
+                    <div class="quoted-box">
+                        <div class="q-user">${escapeHtml(msg.replyTo.user)}</div>
+                        <div style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${escapeHtml(msg.replyTo.text)}</div>
+                    </div>
+                `;
+            }
+
             const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const amIAdmin = currentGroupSettings.admins.includes(myUsername);
             const pinButtonHtml = amIAdmin && msg._id ? `<button class="pin-btn" onclick="togglePin('${msg._id}')" title="Sabitle / Kaldır">📌</button>` : '';
+            const replyButtonHtml = `<button class="reply-action-btn" title="Yanıtla" onclick="prepareReply('${msg.user}', ${msg._id ? `'${msg._id}'` : 'null'}, '${escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬</button>`;
 
             const userAvatar = msg.avatar || knownProfiles[msg.user];
             let avatarHtml = '';
@@ -408,9 +484,10 @@
                     ${avatarHtml}
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-                            <span class="username" style="margin: 0;">${msg.user}</span>
-                            <span class="time" style="margin: 0;">${timeStr} ${pinButtonHtml}</span>
+                            <span class="username" style="margin: 0; font-weight: bold; font-size: 13px; color: #e0f7fc;">${escapeHtml(msg.user)}</span>
+                            <span class="time" style="margin: 0; font-size: 11px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${replyButtonHtml} ${pinButtonHtml}</span>
                         </div>
+                        ${replyHtml}
                         <div style="line-height: 1.4; font-size: 15px;">${formattedText}</div>
                     </div>
                 </div>
@@ -419,7 +496,19 @@
             chat.scrollTop = chat.scrollHeight;
         }
 
-        function escapeHtml(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        // Yanıtla Butonuna Basıldığında Çalışacak Fonksiyon
+        function prepareReply(user, msgId, text) {
+            currentReplyData = { user: user, text: text };
+            document.getElementById('replyingToUser').textContent = user;
+            document.getElementById('replyingToText').textContent = text;
+            document.getElementById('replyPreview').classList.remove('hidden');
+            document.getElementById('messageInput').focus();
+        }
+
+        function escapeHtml(text) { 
+            if (!text) return '';
+            return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
+        }
     </script>
 </body>
 </html>
