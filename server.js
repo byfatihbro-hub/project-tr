@@ -2,7 +2,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+
+// Modülleri ayrı klasörden çekiyoruz
 const Message = require('./models/Message');
+const Group = require('./models/Group');
+const Settings = require('./models/Settings');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,10 +15,7 @@ const io = new Server(server);
 const activeUsers = new Map();
 const userProfiles = new Map();
 
-let groupSettings = {
-    icon: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500', // Kesin çalışan sağlam grup resmi
-    admins: ['Fatih', 'fatih']
-};
+let groupSettings = { icon: '', admins: [] };
 
 function broadcastActiveUsers() {
     const users = Array.from(activeUsers.keys()).map(u => ({
@@ -24,22 +25,33 @@ function broadcastActiveUsers() {
     io.emit('active_users', users);
 }
 
+async function broadcastGroups() {
+    const groups = await Group.find().sort({ timestamp: 1 });
+    io.emit('update_groups', groups);
+}
+
 mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
     .then(async () => {
         console.log('MongoDB Atlas bağlantısı başarılı! 🟢');
-        try {
-            console.log('Mesajlar güvenle yerinde duruyor, silme işlemi yapılmadı! 🧹');
-        } catch(e) {}
-    })
-    .catch(err => console.error('MongoDB bağlantı hatası:', err));
+        
+        let dbSettings = await Settings.findOne({ type: 'global' });
+        if (!dbSettings) {
+            dbSettings = new Settings({ type: 'global' });
+            await dbSettings.save();
+        }
+        groupSettings.icon = dbSettings.icon;
+        groupSettings.admins = dbSettings.admins;
+
+    }).catch(err => console.error('MongoDB bağlantı hatası:', err));
 
 app.use(express.static('public'));
 
 io.on('connection', async (socket) => {
     console.log('Project TR hattına bağlandılar! 🚗');
+    
     socket.emit('group_settings', groupSettings);
+    broadcastGroups();
 
-    // Varsayılan olarak her kullanıcıyı 'global' odaya alıyoruz
     socket.join('global');
     socket.currentRoom = 'global';
 
@@ -76,13 +88,44 @@ io.on('connection', async (socket) => {
         broadcastActiveUsers();
     });
 
-    // 🔄 YENİ EKLENEN: ODA / DM / KANAL DEĞİŞTİRME MEKANİZMASI
-    socket.on('switch_room', (newRoomId) => {
+    socket.on('switch_room', async (newRoomId) => {
         if (socket.currentRoom) {
             socket.leave(socket.currentRoom);
         }
         socket.join(newRoomId);
         socket.currentRoom = newRoomId;
+
+        try {
+            const roomMessages = await Message.find({ roomId: newRoomId }).sort({ timestamp: 1 }).limit(100);
+            socket.emit('room_history', roomMessages);
+        } catch (err) {
+            console.error('Oda geçmişi çekilemedi:', err);
+        }
+    });
+
+    socket.on('create_group', async (groupName) => {
+        if (!groupName || groupName.trim() === '') return;
+        const gId = 'group-' + Date.now();
+        try {
+            const newGroup = new Group({ roomId: gId, name: groupName.trim() });
+            await newGroup.save();
+            broadcastGroups();
+        } catch (err) {
+            console.error('Grup oluşturulamadı:', err);
+        }
+    });
+
+    socket.on('delete_group', async (roomId) => {
+        if (groupSettings.admins.includes(socket.username)) {
+            try {
+                await Group.deleteOne({ roomId: roomId });
+                await Message.deleteMany({ roomId: roomId }); 
+                broadcastGroups();
+                io.to(roomId).emit('group_deleted', 'global'); 
+            } catch (err) {
+                console.error('Grup silinemedi:', err);
+            }
+        }
     });
 
     socket.on('update_avatar', (avatarUrl) => {
@@ -92,26 +135,28 @@ io.on('connection', async (socket) => {
         }
     });
 
-    socket.on('change_group_icon', (newUrl) => {
+    socket.on('change_group_icon', async (newUrl) => {
         if (groupSettings.admins.includes(socket.username)) {
             groupSettings.icon = newUrl;
+            await Settings.updateOne({ type: 'global' }, { icon: newUrl });
             io.emit('group_settings', groupSettings);
         }
     });
 
-    // YENİ: ŞİFRE İLE YÖNETİCİ OLMA (Admin password: 1992)
-    socket.on('claim_admin', (pin) => {
+    socket.on('claim_admin', async (pin) => {
         if (pin === "1992" && socket.username) {
             if (!groupSettings.admins.includes(socket.username)) {
                 groupSettings.admins.push(socket.username);
+                await Settings.updateOne({ type: 'global' }, { admins: groupSettings.admins });
                 io.emit('group_settings', groupSettings);
             }
         }
     });
 
-    socket.on('make_admin', (targetUser) => {
+    socket.on('make_admin', async (targetUser) => {
         if (groupSettings.admins.includes(socket.username) && !groupSettings.admins.includes(targetUser)) {
             groupSettings.admins.push(targetUser);
+            await Settings.updateOne({ type: 'global' }, { admins: groupSettings.admins });
             io.emit('group_settings', groupSettings);
         }
     });
@@ -123,7 +168,7 @@ io.on('connection', async (socket) => {
                 if (msg) {
                     msg.pinned = !msg.pinned;
                     await msg.save();
-                    io.emit('pinned_updated', msg);
+                    io.to(msg.roomId).emit('pinned_updated', msg);
                 }
             } catch (err) {
                 console.error('Sabitleme hatası:', err);
@@ -131,14 +176,6 @@ io.on('connection', async (socket) => {
         }
     });
 
-    try {
-        const previousMessages = await Message.find().sort({ timestamp: 1 }).limit(100);
-        socket.emit('init_messages', previousMessages);
-    } catch (err) {
-        console.error('Geçmiş mesajlar yüklenemedi:', err);
-    }
-
-    // 💬 GÜNCELLENMİŞ CHAT MESAJI (ODA, DM, SESLİ MESAJ VE BATTLE CHALLENGE DESTEKLİ)
     socket.on('chat message', async (data) => {
         try {
             const cleanUser = data.user ? data.user.trim() : '';
@@ -151,13 +188,12 @@ io.on('connection', async (socket) => {
                 avatar: userAvatar,
                 replyTo: data.replyTo || null,
                 audioBase64: data.audioBase64 || null,
-                isBattle: data.isBattle || false, // Initial D Battle Challenge desteği
-                roomId: targetRoom, // Hangi odaya ait olduğu
+                isBattle: data.isBattle || false,
+                roomId: targetRoom, 
                 pinned: false
             });
             await newMessage.save();
 
-            // Mesajı SADECE ilgili odadakilere/DM'deki kişilere fırlatıyoruz
             io.to(targetRoom).emit('chat message', newMessage);
         } catch (err) {
             console.error('Mesaj kaydedilemedi:', err);
@@ -174,8 +210,11 @@ io.on('connection', async (socket) => {
 
 setInterval(async () => {
     try {
-        // İstersen buradaki süreyi çok uzun bir güne (örn: 365 gün) çıkarabilir veya tamamen boş bırakabilirsin.
-        // Şu an sadece sabitlenmeyenler için süreyi uzatıyoruz ki silinmesinler.
+        const fourDaysAgo = new Date(Date.now() - (4 * 24 * 60 * 60 * 1000));
+        const result = await Message.deleteMany({ timestamp: { $lt: fourDaysAgo }, pinned: false });
+        if (result.deletedCount > 0) {
+            console.log(`Otomatik Temizlik: ${result.deletedCount} adet 4 günlük eski mesaj silindi! 🧹`);
+        }
     } catch (err) {
         console.error('Otomatik temizleme hatası:', err);
     }
