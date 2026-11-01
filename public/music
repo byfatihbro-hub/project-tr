@@ -1,5 +1,1 @@
-const playlist = [
-    { title: "Şarkı Adı 1", src: "/music/sarki1.mp3" },
-    { title: "Şarkı Adı 2", src: "/music/sarki2.mp3" },
-    { title: "Şarkı Adı 3", src: "/music/sarki3.mp3" }
-];
+
