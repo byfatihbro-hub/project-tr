@@ -27,11 +27,7 @@ function broadcastActiveUsers() {
 mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/project-tr?retryWrites=true&w=majority')
     .then(async () => {
         console.log('MongoDB Atlas bağlantısı başarılı! 🟢');
-        // Sunucu açıldığında eski mesajların silinmesini istemiyorsan buradaki deleteMany bloğunu kapatabilirsin.
-        // Ancak sabitlenenler her halükarda korunuyor.
         try {
-            // İsteğe bağlı: Sunucu açılışında otomatik temizliği burada devre dışı bıraktık ki mesajlar sen sil diyene kadar dursun.
-            // await Message.deleteMany({ pinned: { $ne: true } });
             console.log('Mesajlar güvenle yerinde duruyor, silme işlemi yapılmadı! 🧹');
         } catch(e) {}
     })
@@ -42,6 +38,10 @@ app.use(express.static('public'));
 io.on('connection', async (socket) => {
     console.log('Project TR hattına bağlandılar! 🚗');
     socket.emit('group_settings', groupSettings);
+
+    // Varsayılan olarak her kullanıcıyı 'global' odaya alıyoruz
+    socket.join('global');
+    socket.currentRoom = 'global';
 
     socket.on('set-username', (data, callback) => {
         let username, avatar;
@@ -74,6 +74,15 @@ io.on('connection', async (socket) => {
         callback({ success: true });
         
         broadcastActiveUsers();
+    });
+
+    // 🔄 YENİ EKLENEN: ODA / DM / KANAL DEĞİŞTİRME MEKANİZMASI
+    socket.on('switch_room', (newRoomId) => {
+        if (socket.currentRoom) {
+            socket.leave(socket.currentRoom);
+        }
+        socket.join(newRoomId);
+        socket.currentRoom = newRoomId;
     });
 
     socket.on('update_avatar', (avatarUrl) => {
@@ -129,19 +138,27 @@ io.on('connection', async (socket) => {
         console.error('Geçmiş mesajlar yüklenemedi:', err);
     }
 
+    // 💬 GÜNCELLENMİŞ CHAT MESAJI (ODA, DM, SESLİ MESAJ VE BATTLE CHALLENGE DESTEKLİ)
     socket.on('chat message', async (data) => {
         try {
             const cleanUser = data.user ? data.user.trim() : '';
             const userAvatar = userProfiles.get(cleanUser) || '';
+            const targetRoom = data.roomId || socket.currentRoom || 'global';
+
             const newMessage = new Message({
                 user: cleanUser,
                 text: data.text,
                 avatar: userAvatar,
+                replyTo: data.replyTo || null,
+                audioBase64: data.audioBase64 || null,
+                isBattle: data.isBattle || false, // Initial D Battle Challenge desteği
+                roomId: targetRoom, // Hangi odaya ait olduğu
                 pinned: false
             });
             await newMessage.save();
 
-            io.emit('chat message', newMessage);
+            // Mesajı SADECE ilgili odadakilere/DM'deki kişilere fırlatıyoruz
+            io.to(targetRoom).emit('chat message', newMessage);
         } catch (err) {
             console.error('Mesaj kaydedilemedi:', err);
         }
@@ -155,7 +172,6 @@ io.on('connection', async (socket) => {
     });
 });
 
-// İstediğin gibi mesajların otomatik silinmesini iptal ettik (Süre kontrolünü kaldırdık, sunucu kapansa da açılsa da mesajlar durur, sabitlenenler zaten güvence altında)
 setInterval(async () => {
     try {
         // İstersen buradaki süreyi çok uzun bir güne (örn: 365 gün) çıkarabilir veya tamamen boş bırakabilirsin.
