@@ -38,7 +38,7 @@
         #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; position: relative; z-index: 2; }
         .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 5px; cursor: pointer; border-radius: 8px; transition: background 0.2s; }
         .chat-header:hover { background: rgba(255,255,255,0.1); }
-        .header-buttons { display: flex; gap: 6px; }
+        .header-buttons { display: flex; gap: 6px; align-items: center; }
 
         #pinnedBar { background: rgba(0, 0, 0, 0.4); border-left: 4px solid #ffeb3b; padding: 8px 12px; margin-bottom: 8px; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
         #pinnedBar:hover { background: rgba(0, 0, 0, 0.6); }
@@ -79,7 +79,7 @@
         .mention-item:hover { background: #3b4043; }
         .action-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         
-        #groupInfoOverlay, #pinnedMessagesOverlay, #battleOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        #groupInfoOverlay, #pinnedMessagesOverlay, #battleOverlay, #garageOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         .group-info-modal { background: rgba(25, 30, 40, 0.95); width: 90%; max-width: 380px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); max-height: 85vh; overflow-y: auto; position: relative; }
         .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 24px; cursor: pointer; }
         .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
@@ -115,6 +115,9 @@
             </div>
             <div class="nav-item" onclick="openBattleModal()">
                 <span>🏁 Battle Challenge</span>
+            </div>
+            <div class="nav-item" onclick="openGarageModal()" style="background: rgba(255, 193, 7, 0.2); border-color: #ffc107;">
+                <span>🚗 Garaj & Kutu Aç</span>
             </div>
 
             <div class="sidebar-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -152,6 +155,12 @@
                     </div>
                 </div>
                 <div class="header-buttons" onclick="event.stopPropagation();">
+                    <!-- 🎵 Sade Ses Kaydırmalı Radyo Widget'ı -->
+                    <div style="display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.4); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                        <span style="font-size: 12px;">📻</span>
+                        <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.3" style="width: 60px; height: 4px; cursor: pointer;" title="Ses Seviyesi">
+                    </div>
+                    <button class="action-btn" onclick="openGarageModal()">🎁 <span id="myPointsBadge">0</span> P</button>
                     <button class="action-btn" onclick="alert('📞 Sesli görüşme (WebRTC) özelliği sunucu tarafında henüz geliştirilme aşamasındadır.')">📞</button>
                     <button id="notifBtn" class="action-btn" onclick="toggleNotifications()">🔔</button>
                 </div>
@@ -181,6 +190,24 @@
                     <button class="aero-btn" type="submit">Gönder</button>
                 </div>
             </form>
+        </div>
+
+        <!-- 🚗 GARAJ VE KUTU AÇMA MODALI -->
+        <div id="garageOverlay" class="hidden">
+            <div class="group-info-modal">
+                <button class="close-btn" onclick="closeGarageModal()">×</button>
+                <h2 style="text-align: center; color: #ffeb3b; margin-top: 0;">🏎️ GARAJ & KUTU AÇILIMI</h2>
+                <p style="text-align: center; font-size: 12px; color: #aaa;">Puanın: <span id="garagePoints" style="color: #2ecc71; font-weight: bold;">0</span> Puan</p>
+                
+                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #00f2fe;">📦 JDM Sürpriz Kutusu (50 Puan)</h3>
+                    <p style="font-size: 11px; color: #ddd; margin: 0 0 10px 0;">Kutuyu aç, efsanevi bir araba koleksiyonuna katılsın!</p>
+                    <button class="aero-btn" onclick="openMysteryBox()" style="background: linear-gradient(to bottom, #ff9800, #f57c00); width: 100%; padding: 8px;">🎁 Kutuyu Aç!</button>
+                </div>
+
+                <h3 style="margin: 0 0 8px 0; font-size: 13px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">Koleksiyonundaki Araçlar:</h3>
+                <div id="inventoryList" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;"></div>
+            </div>
         </div>
 
         <div id="groupInfoOverlay" class="hidden">
@@ -309,11 +336,43 @@
         }
         setInterval(drawSnow, 33);
 
+        // 🎵 Sade Arka Plan Radyo (Oynat/Durdur Butonsuz, Sadece Ses Ayarlı)
+        const playlist = [
+            { title: "m.o.v.e - Dive into Stream", src: "https://ia800300.us.archive.org/11/items/InitialD_FourthStage_Music/m.o.v.e%20-%20Dive%20into%20Stream.mp3" },
+            { title: "T. Stebbins - Chill Eurobeat", src: "https://ia600900.us.archive.org/8/items/Eurobeat_Collections/Initial%20D%20-%20Night%20of%20Fire.mp3" },
+            { title: "T. Stebbins - Midnight Touge", src: "https://ia800300.us.archive.org/11/items/InitialD_FourthStage_Music/m.o.v.e%20-%20Rage%20your%20dream.mp3" }
+        ];
+        let currentTrackIndex = 0;
+        const bgAudio = new Audio();
+        bgAudio.volume = 0.3;
+
+        function startBackgroundRadio() {
+            bgAudio.src = playlist[currentTrackIndex].src;
+            bgAudio.play().catch(() => {});
+        }
+
+        bgAudio.addEventListener('ended', () => {
+            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            bgAudio.src = playlist[currentTrackIndex].src;
+            bgAudio.play().catch(() => {});
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const volSlider = document.getElementById('volumeSlider');
+            if (volSlider) {
+                volSlider.addEventListener('input', (e) => {
+                    bgAudio.volume = e.target.value;
+                });
+            }
+        });
+
         // --- UYGULAMA KODLARI ---
         const SECRET_PIN = "1992";
         
         let myUsername = localStorage.getItem('project_tr_username') || ''; 
         let myAvatar = localStorage.getItem('project_tr_avatar') || '';
+        let myPoints = 0;
+        let myInventory = [];
         let notificationsEnabled = false;
         let allKnownUsers = new Set();
         let knownProfiles = {}; 
@@ -334,6 +393,7 @@
         function unlockAudio() {
             standardSound.play().then(() => { standardSound.pause(); standardSound.currentTime = 0; }).catch(()=>{});
             mentionSound.play().then(() => { mentionSound.pause(); mentionSound.currentTime = 0; }).catch(()=>{});
+            startBackgroundRadio(); // Şifre girilip girildiğinde radyo otomatik başlar
         }
 
         if (window.visualViewport) {
@@ -414,6 +474,40 @@
 
         function closeGroupInfo() { document.getElementById('groupInfoOverlay').classList.add('hidden'); document.getElementById('newIconUrl').value = ''; }
         
+        // 🚗 GARAJ & KUTU AÇMA FONKSİYONLARI
+        function openGarageModal() {
+            document.getElementById('garagePoints').textContent = myPoints;
+            const invList = document.getElementById('inventoryList');
+            invList.innerHTML = '';
+            if(myInventory.length === 0) {
+                invList.innerHTML = '<p style="font-size:12px; color:#aaa; text-align:center;">Henüz aracın yok kanka!</p>';
+            } else {
+                myInventory.forEach(car => {
+                    const div = document.createElement('div');
+                    div.style.cssText = "background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; font-size: 13px; border-left: 3px solid #00f2fe;";
+                    div.textContent = "🚗 " + car;
+                    invList.appendChild(div);
+                });
+            }
+            document.getElementById('garageOverlay').classList.remove('hidden');
+        }
+        function closeGarageModal() { document.getElementById('garageOverlay').classList.add('hidden'); }
+
+        function openMysteryBox() {
+            socket.emit('open_box', 50, (res) => {
+                if(res.success) {
+                    myPoints = res.remainingPoints;
+                    myInventory = res.inventory;
+                    document.getElementById('garagePoints').textContent = myPoints;
+                    document.getElementById('myPointsBadge').textContent = myPoints;
+                    alert(`🎉 Kutudan Çıktı: ${res.wonCar.name} (${res.wonCar.rarity})!`);
+                    openGarageModal();
+                } else {
+                    alert(res.message);
+                }
+            });
+        }
+
         function updateMyAvatar() {
             const url = document.getElementById('myAvatarUrl').value.trim();
             localStorage.setItem('project_tr_avatar', url);
@@ -519,6 +613,9 @@
                     socket.emit('set-username', { username: savedUser, avatar: myAvatar }, (response) => {
                         if (response.success) {
                             myUsername = savedUser; 
+                            myPoints = response.points; 
+                            myInventory = response.inventory;
+                            document.getElementById('myPointsBadge').textContent = myPoints;
                             document.getElementById('currentUserDisplay').textContent = myUsername;
                             document.getElementById('chatContainer').classList.remove('hidden'); 
                             document.getElementById('messageInput').focus();
@@ -538,9 +635,16 @@
             if (!enteredName) { document.getElementById('nickErrorMsg').textContent = "İsim boş bırakılamaz!"; document.getElementById('nickErrorMsg').style.display = 'block'; return; }
             socket.emit('set-username', { username: enteredName, avatar: myAvatar }, (response) => {
                 if (response.success) {
-                    myUsername = enteredName; localStorage.setItem('project_tr_username', myUsername); localStorage.setItem('project_tr_nick_date', Date.now().toString());
-                    document.getElementById('currentUserDisplay').textContent = myUsername; document.getElementById('nicknameScreen').classList.add('hidden');
-                    document.getElementById('chatContainer').classList.remove('hidden'); document.getElementById('messageInput').focus();
+                    myUsername = enteredName; 
+                    myPoints = response.points; 
+                    myInventory = response.inventory;
+                    localStorage.setItem('project_tr_username', myUsername); 
+                    localStorage.setItem('project_tr_nick_date', Date.now().toString());
+                    document.getElementById('myPointsBadge').textContent = myPoints;
+                    document.getElementById('currentUserDisplay').textContent = myUsername; 
+                    document.getElementById('nicknameScreen').classList.add('hidden');
+                    document.getElementById('chatContainer').classList.remove('hidden'); 
+                    document.getElementById('messageInput').focus();
                     switchRoom('global', '🌐 Project TR');
                 } else { document.getElementById('nickErrorMsg').textContent = response.message; document.getElementById('nickErrorMsg').style.display = 'block'; }
             });
@@ -593,6 +697,11 @@
             usersData.forEach(u => { 
                 allKnownUsers.add(u.username); 
                 if(u.avatar) knownProfiles[u.username] = u.avatar; 
+                if(u.username === myUsername) { 
+                    myPoints = u.points; 
+                    myInventory = u.inventory; 
+                    document.getElementById('myPointsBadge').textContent = myPoints; 
+                }
             });
             document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} Üye`;
             renderDmSidebar(Array.from(allKnownUsers));
@@ -623,6 +732,7 @@
             if (e.target === document.getElementById('groupInfoOverlay')) closeGroupInfo();
             if (e.target === document.getElementById('pinnedMessagesOverlay')) closePinnedModal();
             if (e.target === document.getElementById('battleOverlay')) closeBattleModal();
+            if (e.target === document.getElementById('garageOverlay')) closeGarageModal();
             
             if (!e.target.classList.contains('msg-options-btn')) {
                 document.querySelectorAll('.msg-options-menu').forEach(menu => { menu.classList.remove('show-menu'); });
