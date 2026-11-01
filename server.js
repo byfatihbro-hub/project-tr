@@ -14,11 +14,13 @@ const io = new Server(server);
 
 let groupSettings = { icon: '', admins: [] };
 
-// 🟢 VERİTABANI TABANLI AKTİF KULLANICI ŞEMASI (Sunucu kapanınca silinmez)
+// 🟢 VERİTABANI TABANLI AKTİF KULLANICI ŞEMASI (Puanlar ve Koleksiyon eklendi!)
 const userSessionSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     avatar: { type: String, default: '' },
     socketId: { type: String, required: true },
+    points: { type: Number, default: 100 }, // Başlangıç hediyesi minik puan
+    inventory: { type: Array, default: [] }, // Koleksiyona düşen arabalar
     lastSeen: { type: Date, default: Date.now }
 });
 const UserSession = mongoose.models.UserSession || mongoose.model('UserSession', userSessionSchema);
@@ -28,7 +30,8 @@ async function broadcastActiveUsers() {
         const activeSessions = await UserSession.find({});
         const users = activeSessions.map(u => ({
             username: u.username,
-            avatar: u.avatar || ''
+            avatar: u.avatar || '',
+            points: u.points || 0
         }));
         io.emit('active_users', users);
     } catch (err) {
@@ -84,22 +87,80 @@ io.on('connection', async (socket) => {
         }
         
         try {
-            await UserSession.findOneAndUpdate(
-                { username: username },
-                { 
-                    socketId: socket.id, 
-                    avatar: avatar || undefined, 
-                    lastSeen: Date.now() 
-                },
-                { upsert: true, new: true, setDefaultsOnInsert: true }
-            );
+            let user = await UserSession.findOne({ username: username });
+            if (!user) {
+                user = new UserSession({
+                    username: username,
+                    socketId: socket.id,
+                    avatar: avatar || '',
+                    points: 150, // Yeni kullanıcılara başlangıç puanı
+                    inventory: ['AE86 Trueno (Başlangıç)']
+                });
+                await user.save();
+            } else {
+                user.socketId = socket.id;
+                if (avatar) user.avatar = avatar;
+                await user.save();
+            }
 
             socket.username = username;
-            callback({ success: true });
+            callback({ success: true, points: user.points, inventory: user.inventory });
             broadcastActiveUsers();
         } catch (err) {
             console.error('Kullanıcı kaydedilemedi:', err);
             callback({ success: false, message: "Kayıt hatası!" });
+        }
+    });
+
+    // 🎁 KUTU AÇMA VE ARAÇ DÜŞÜRME SİSTEMİ
+    socket.on('open_box', async (cost, callback) => {
+        if (!socket.username) return;
+        try {
+            let user = await UserSession.findOne({ username: socket.username });
+            if (!user || user.points < cost) {
+                return callback({ success: false, message: "Yetersiz puan kanka!" });
+            }
+
+            user.points -= cost;
+
+            // Çıkabilecek efsane JDM / Koleksiyon arabaları
+            const possibleCars = [
+                { name: 'Nissan Skyline GT-R R34 V-Spec', rarity: 'Efsanevi 🌟' },
+                { name: 'Mazda RX-7 FD3S (Spirit R)', rarity: 'Nadir 🔥' },
+                { name: 'Toyota Supra MK4 (2JZ)', rarity: 'Efsanevi 🌟' },
+                { name: 'Honda Civic EG6 SiR', rarity: 'Klasik ⚡' },
+                { name: 'Mitsubishi Lancer Evolution IX', rarity: 'Nadir 🔥' },
+                { name: 'Renault Toros SW (Project TR Special)', rarity: 'Özel Kasa 😎' }
+            ];
+
+            const wonCar = possibleCars[Math.floor(Math.random() * possibleCars.length)];
+            user.inventory.push(wonCar.name);
+            await user.save();
+
+            callback({ 
+                success: true, 
+                remainingPoints: user.points, 
+                wonCar: wonCar 
+            });
+            broadcastActiveUsers();
+        } catch (err) {
+            console.error('Kutu açma hatası:', err);
+            callback({ success: false, message: "Sunucu hatası!" });
+        }
+    });
+
+    // 🎮 MİNİ OYUN PUAN KAZANMA
+    socket.on('add_points', async (earnedPoints) => {
+        if (!socket.username) return;
+        try {
+            let user = await UserSession.findOne({ username: socket.username });
+            if (user) {
+                user.points += earnedPoints;
+                await user.save();
+                broadcastActiveUsers();
+            }
+        } catch (err) {
+            console.error('Puan eklenemedi:', err);
         }
     });
 
@@ -195,7 +256,6 @@ io.on('connection', async (socket) => {
         }
     });
 
-    // 🗑️ MESAJ SİLME (Sadece Yöneticiler)
     socket.on('delete_message', async (msgId) => {
         if (groupSettings.admins.includes(socket.username)) {
             try {
