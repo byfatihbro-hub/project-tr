@@ -12,17 +12,28 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const activeUsers = new Map();
-const userProfiles = new Map();
-
 let groupSettings = { icon: '', admins: [] };
 
-function broadcastActiveUsers() {
-    const users = Array.from(activeUsers.keys()).map(u => ({
-        username: u,
-        avatar: userProfiles.get(u) || ''
-    }));
-    io.emit('active_users', users);
+// 🟢 VERİTABANI TABANLI AKTİF KULLANICI ŞEMASI (Sunucu kapanınca silinmez)
+const userSessionSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    avatar: { type: String, default: '' },
+    socketId: { type: String, required: true },
+    lastSeen: { type: Date, default: Date.now }
+});
+const UserSession = mongoose.models.UserSession || mongoose.model('UserSession', userSessionSchema);
+
+async function broadcastActiveUsers() {
+    try {
+        const activeSessions = await UserSession.find({});
+        const users = activeSessions.map(u => ({
+            username: u.username,
+            avatar: u.avatar || ''
+        }));
+        io.emit('active_users', users);
+    } catch (err) {
+        console.error('Aktif kullanıcılar çekilemedi:', err);
+    }
 }
 
 async function broadcastGroups() {
@@ -34,6 +45,8 @@ mongoose.connect('mongodb+srv://fatih:fatih123@cluster0.shfpkht.mongodb.net/proj
     .then(async () => {
         console.log('MongoDB Atlas bağlantısı başarılı! 🟢');
         
+        await UserSession.updateMany({}, { socketId: 'disconnected' });
+
         let dbSettings = await Settings.findOne({ type: 'global' });
         if (!dbSettings) {
             dbSettings = new Settings({ type: 'global' });
@@ -51,11 +64,12 @@ io.on('connection', async (socket) => {
     
     socket.emit('group_settings', groupSettings);
     broadcastGroups();
+    broadcastActiveUsers();
 
     socket.join('global');
     socket.currentRoom = 'global';
 
-    socket.on('set-username', (data, callback) => {
+    socket.on('set-username', async (data, callback) => {
         let username, avatar;
         if (typeof data === 'object') {
             username = data.username ? data.username.trim() : '';
@@ -69,23 +83,24 @@ io.on('connection', async (socket) => {
             return callback({ success: false, message: "Geçersiz isim kanka!" });
         }
         
-        if (activeUsers.has(username)) {
-            const oldSocketId = activeUsers.get(username);
-            const oldSocket = io.sockets.sockets.get(oldSocketId);
-            if (oldSocket) oldSocket.disconnect();
-            activeUsers.delete(username);
-        }
+        try {
+            await UserSession.findOneAndUpdate(
+                { username: username },
+                { 
+                    socketId: socket.id, 
+                    avatar: avatar || undefined, 
+                    lastSeen: Date.now() 
+                },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
 
-        for (let [user, sId] of activeUsers.entries()) {
-            if (sId === socket.id) activeUsers.delete(user);
+            socket.username = username;
+            callback({ success: true });
+            broadcastActiveUsers();
+        } catch (err) {
+            console.error('Kullanıcı kaydedilemedi:', err);
+            callback({ success: false, message: "Kayıt hatası!" });
         }
-
-        activeUsers.set(username, socket.id);
-        if(avatar) userProfiles.set(username, avatar);
-        socket.username = username;
-        callback({ success: true });
-        
-        broadcastActiveUsers();
     });
 
     socket.on('switch_room', async (newRoomId) => {
@@ -128,10 +143,14 @@ io.on('connection', async (socket) => {
         }
     });
 
-    socket.on('update_avatar', (avatarUrl) => {
+    socket.on('update_avatar', async (avatarUrl) => {
         if (socket.username) {
-            userProfiles.set(socket.username, avatarUrl);
-            broadcastActiveUsers();
+            try {
+                await UserSession.updateOne({ username: socket.username }, { avatar: avatarUrl });
+                broadcastActiveUsers();
+            } catch (err) {
+                console.error('Avatar güncellenemedi:', err);
+            }
         }
     });
 
@@ -195,7 +214,8 @@ io.on('connection', async (socket) => {
     socket.on('chat message', async (data) => {
         try {
             const cleanUser = data.user ? data.user.trim() : '';
-            const userAvatar = userProfiles.get(cleanUser) || '';
+            const userSession = await UserSession.findOne({ username: cleanUser });
+            const userAvatar = userSession ? userSession.avatar : '';
             const targetRoom = data.roomId || socket.currentRoom || 'global';
 
             const newMessage = new Message({
@@ -216,9 +236,9 @@ io.on('connection', async (socket) => {
         }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
         if (socket.username) {
-            activeUsers.delete(socket.username);
+            await UserSession.updateOne({ username: socket.username }, { socketId: 'offline' });
             broadcastActiveUsers();
         }
     });
@@ -229,7 +249,7 @@ setInterval(async () => {
         const fourDaysAgo = new Date(Date.now() - (4 * 24 * 60 * 60 * 1000));
         const result = await Message.deleteMany({ timestamp: { $lt: fourDaysAgo }, pinned: false });
         if (result.deletedCount > 0) {
-            console.log(`Otomatik Temizlik: ${result.deletedCount} adet 4 günlük eski mesaj silindi! 🧹`);
+            console.log(`Otomatik Temizlik: ${result.deletedCount} adet eski mesaj silindi! 🧹`);
         }
     } catch (err) {
         console.error('Otomatik temizleme hatası:', err);
