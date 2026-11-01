@@ -176,6 +176,22 @@ io.on('connection', async (socket) => {
         }
     });
 
+    // 🗑️ MESAJ SİLME (Sadece Yöneticiler)
+    socket.on('delete_message', async (msgId) => {
+        if (groupSettings.admins.includes(socket.username)) {
+            try {
+                const msg = await Message.findById(msgId);
+                if (msg) {
+                    const targetRoom = msg.roomId;
+                    await Message.deleteOne({ _id: msgId });
+                    io.to(targetRoom).emit('message_deleted', msgId);
+                }
+            } catch (err) {
+                console.error('Mesaj silinemedi:', err);
+            }
+        }
+    });
+
     socket.on('chat message', async (data) => {
         try {
             const cleanUser = data.user ? data.user.trim() : '';
