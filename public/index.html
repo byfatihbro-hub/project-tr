@@ -7,8 +7,8 @@
     <style>
         * { box-sizing: border-box; }
         body { background: linear-gradient(135deg, #1a73e8 0%, #00b4d8 50%, #90e0ef 100%); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; justify-content: center; align-items: center; }
-        .app-container { width: 100%; height: 100%; display: flex; flex-direction: column; padding: 10px; background: transparent; position: relative; }
-        @media (min-width: 768px) { .app-container { max-width: 850px; max-height: 85vh; height: 85vh; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(18, 18, 18, 0.4); backdrop-filter: blur(16px); padding: 20px; } }
+        .app-container { width: 100%; height: 100%; display: flex; flex-direction: row; padding: 10px; background: transparent; position: relative; gap: 10px; }
+        @media (min-width: 768px) { .app-container { max-width: 1050px; max-height: 85vh; height: 85vh; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(18, 18, 18, 0.4); backdrop-filter: blur(16px); padding: 15px; } }
         .hidden { display: none !important; }
         .glass-box { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37); border-radius: 12px; padding: 15px; }
         .center-screen { position: absolute; width: 90%; max-width: 400px; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; text-align: center; z-index: 100; }
@@ -16,6 +16,13 @@
         .aero-btn { background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); border: 1px solid #ffffff; color: #fff; font-weight: bold; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2); text-shadow: 0 1px 1px rgba(0,0,0,0.3); transition: 0.2s; }
         .aero-btn:hover { background: linear-gradient(to bottom, #00f2fe 0%, #4facfe 100%); }
         .aero-btn:active { transform: scale(0.95); }
+        
+        /* 🏎️ YENİ EKLENEN SOL SIDEBAR STİLLERİ */
+        #sidebar { width: 250px; height: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex-shrink: 0; z-index: 50; }
+        .sidebar-title { font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #ffeb3b; margin-top: 10px; margin-bottom: 4px; text-transform: uppercase; }
+        .nav-item { padding: 10px 12px; background: rgba(255,255,255,0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 13px; transition: 0.2s; }
+        .nav-item:hover, .nav-item.active { background: rgba(0, 242, 254, 0.3); border-color: #00f2fe; font-weight: bold; }
+        .user-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
         
         #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; position: relative; }
         .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 5px; cursor: pointer; border-radius: 8px; transition: background 0.2s; }
@@ -49,7 +56,8 @@
 
         .form-group { position: relative; display: flex; flex-direction: column; gap: 8px; }
         .input-row { display: flex; gap: 8px; position: relative; width: 100%; align-items: stretch; }
-        input { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
+        input, select { padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.4); font-size: 16px; background: rgba(255, 255, 255, 0.2); color: #fff; outline: none; }
+        select option { background: #2a2f32; color: #fff; }
         #messageInput { flex: 1; }
         
         #replyPreview { background: rgba(0, 0, 0, 0.3); border-left: 4px solid #00f2fe; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
@@ -60,21 +68,58 @@
         .mention-item:hover { background: #3b4043; }
         .action-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         
-        #groupInfoOverlay, #pinnedMessagesOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-        .group-info-modal { background: rgba(25, 30, 40, 0.95); width: 90%; max-width: 350px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); max-height: 85vh; overflow-y: auto; position: relative; }
+        #groupInfoOverlay, #pinnedMessagesOverlay, #battleOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .group-info-modal { background: rgba(25, 30, 40, 0.95); width: 90%; max-width: 380px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); max-height: 85vh; overflow-y: auto; position: relative; }
         .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #aaa; font-size: 24px; cursor: pointer; }
         .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .admin-badge { background: #ff4757; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
         .make-admin-btn { background: #4facfe; border: none; color: white; font-size: 10px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
         
+        /* 🏁 BATTLE CARD STİLİ */
+        .battle-card { background: linear-gradient(135deg, rgba(255,71,87,0.3), rgba(46,204,113,0.3)); border: 2px solid #ff4757; border-radius: 12px; padding: 12px; margin-top: 5px; text-align: center; box-shadow: 0 0 15px rgba(255,71,87,0.4); }
+        
         audio { height: 35px; max-width: 100%; border-radius: 8px; margin-top: 5px; }
         .recording-pulse { animation: pulse 1s infinite; background: rgba(255, 71, 87, 0.8) !important; color: white !important; }
         .stt-active { background: rgba(46, 204, 113, 0.8) !important; color: white !important; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        @media (max-width: 767px) {
+            .app-container { flex-direction: column; }
+            #sidebar { width: 100%; height: 120px; flex-direction: row; flex-wrap: wrap; overflow-x: auto; }
+            .sidebar-title { width: 100%; margin: 2px 0; }
+        }
     </style>
 </head>
 <body>
     <div class="app-container">
+        <!-- 🏁 YENİ EKLENEN SOL SIDEBAR (KANALLAR, DM, GRUPLAR & BATTLE HUB) -->
+        <div id="sidebar" class="glass-box hidden">
+            <div style="font-weight: bold; font-size: 16px; text-align: center; color: #00f2fe; margin-bottom: 5px;">🏎️ PROJECT TR</div>
+            
+            <div class="sidebar-title">Kanallar</div>
+            <div class="nav-item active" onclick="switchRoom('global', 'Global Chat')">
+                <span>🌐 Global Chat</span>
+            </div>
+            <div class="nav-item" onclick="openBattleModal()">
+                <span>🏁 Battle Challenge</span>
+            </div>
+
+            <div class="sidebar-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Gruplar</span>
+                <button onclick="createNewGroup()" style="background: none; border: none; color: #ffeb3b; cursor: pointer; font-weight: bold;">+</button>
+            </div>
+            <div id="groupsSidebarList">
+                <div class="nav-item" onclick="switchRoom('group-sim', '🏎️ Sim Racing TR')">
+                    <span>🏎️ Sim Racing TR</span>
+                </div>
+            </div>
+
+            <div class="sidebar-title">Özel Mesajlar (DM)</div>
+            <div id="dmSidebarList">
+                <!-- Çevrimiçi kullanıcılar JS ile buraya yüklenecek -->
+            </div>
+        </div>
+
         <div id="lockScreen" class="glass-box center-screen">
             <h2>📚 Fizik 11 - Ünite 2 Notları</h2>
             <input id="pinInput" type="password" placeholder="Şifre..." />
@@ -95,7 +140,7 @@
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <img id="headerGroupIcon" src="" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1px solid #fff;">
                     <div>
-                        <h2 style="margin: 0; font-size: 16px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">Project TR</h2>
+                        <h2 style="margin: 0; font-size: 16px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);" id="currentRoomTitle">Project TR</h2>
                         <span style="font-size: 11px; color: #ddd;" id="headerUserCount">Sohbeti görmek için tıkla</span>
                     </div>
                 </div>
@@ -133,6 +178,7 @@
             </form>
         </div>
 
+        <!-- GRUP BİLGİİ OVERLAY -->
         <div id="groupInfoOverlay" class="hidden">
             <div class="group-info-modal">
                 <button class="close-btn" onclick="closeGroupInfo()">×</button>
@@ -164,11 +210,39 @@
             </div>
         </div>
 
+        <!-- SABİTLENMİŞ MESAJLAR OVERLAY -->
         <div id="pinnedMessagesOverlay" class="hidden">
             <div class="group-info-modal">
                 <button class="close-btn" onclick="closePinnedModal()">×</button>
                 <h3 style="margin: 0 0 15px 0; text-align: center; color: #ffeb3b; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">📌 Sabitlenenler</h3>
                 <div id="pinnedMessagesList" style="display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; padding-right: 5px;"></div>
+            </div>
+        </div>
+
+        <!-- 🏎️ YENİ EKLENEN BATTLE CHALLENGE (INITIAL D) MODAL -->
+        <div id="battleOverlay" class="hidden">
+            <div class="group-info-modal">
+                <button class="close-btn" onclick="closeBattleModal()">×</button>
+                <h2 style="text-align: center; color: #ff4757; margin-top: 0;">⚡ INITIAL D BATTLE</h2>
+                <p style="text-align: center; font-size: 12px; color: #aaa;">Rakibini Seç, Haritanı Belirle ve Yarış Teklifi Gönder!</p>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <label style="font-size: 12px; color: #ffeb3b;">Rakip Sürücü:</label>
+                    <select id="battleOpponentSelect" style="width: 100%;"></select>
+
+                    <label style="font-size: 12px; color: #ffeb3b;">Pist / Harita:</label>
+                    <select id="battleTrackSelect" style="width: 100%;">
+                        <option value="Akina Downhill">Akina Downhill</option>
+                        <option value="Gunsai Touge">Gunsai Touge</option>
+                        <option value="Shutoko Revival Project (SRP)">Shutoko Revival Project (SRP)</option>
+                        <option value="Nürburgring Nordschleife">Nürburgring Nordschleife</option>
+                    </select>
+
+                    <label style="font-size: 12px; color: #ffeb3b;">Yarış Sınıfı:</label>
+                    <input id="battleCarClass" type="text" placeholder="Örn: FR Mechanical / NA Class" value="FR Mechanical" />
+
+                    <button class="aero-btn" onclick="sendBattleChallenge()" style="background: linear-gradient(to bottom, #ff4757, #ff6b81); margin-top: 10px;">🔥 YARIŞ TEKLİFİNİ FIRLAT</button>
+                </div>
             </div>
         </div>
     </div>
@@ -185,6 +259,7 @@
         let currentGroupSettings = { icon: '', admins: [] };
         let pinnedMessages = new Map(); 
         let currentReplyData = null;
+        let currentRoom = 'global';
 
         let mediaRecorder;
         let audioChunks = [];
@@ -253,6 +328,10 @@
             const usersArray = Array.from(allKnownUsers);
             document.getElementById('userCount').textContent = usersArray.length;
             document.getElementById('headerUserCount').textContent = `${usersArray.length} üye`;
+            
+            // DM Listesini de Yan Panelde Güncelle
+            renderDmSidebar(usersArray);
+
             usersArray.forEach(user => {
                 const isAdmin = currentGroupSettings.admins.includes(user);
                 const isMe = user === myUsername;
@@ -265,9 +344,72 @@
             });
         }
 
+        function renderDmSidebar(usersArray) {
+            const dmList = document.getElementById('dmSidebarList');
+            if(!dmList) return;
+            dmList.innerHTML = '';
+            usersArray.forEach(u => {
+                if(u !== myUsername) {
+                    const item = document.createElement('div');
+                    item.className = 'nav-item';
+                    item.onclick = () => switchRoom(`dm-${u}`, `💬 ${u}`);
+                    item.innerHTML = `<span>💬 ${u}</span><span class="user-status-dot"></span>`;
+                    dmList.appendChild(item);
+                }
+            });
+        }
+
+        function switchRoom(roomId, title) {
+            currentRoom = roomId;
+            document.getElementById('currentRoomTitle').textContent = title;
+            document.getElementById('chat').innerHTML = '';
+            socket.emit('switch_room', roomId);
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(event && event.currentTarget) event.currentTarget.classList.add('active');
+        }
+
+        function createNewGroup() {
+            const gName = prompt("Yeni Grup Adını Gir Kanka:");
+            if(gName) {
+                const gId = 'group-' + Date.now();
+                const list = document.getElementById('groupsSidebarList');
+                const item = document.createElement('div');
+                item.className = 'nav-item';
+                item.onclick = () => switchRoom(gId, `👥 ${gName}`);
+                item.innerHTML = `<span>👥 ${gName}</span>`;
+                list.appendChild(item);
+                switchRoom(gId, `👥 ${gName}`);
+            }
+        }
+
+        /* 🏁 BATTLE MODAL İŞLEMLERİ */
+        function openBattleModal() {
+            const select = document.getElementById('battleOpponentSelect');
+            select.innerHTML = '';
+            Array.from(allKnownUsers).filter(u => u !== myUsername).forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u; opt.textContent = u; select.appendChild(opt);
+            });
+            document.getElementById('battleOverlay').classList.remove('hidden');
+        }
+        function closeBattleModal() { document.getElementById('battleOverlay').classList.add('hidden'); }
+
+        function sendBattleChallenge() {
+            const opponent = document.getElementById('battleOpponentSelect').value;
+            const track = document.getElementById('battleTrackSelect').value;
+            const carClass = document.getElementById('battleCarClass').value;
+            
+            if(!opponent) { alert("Yarışacak rakip seçilmedi!"); return; }
+            
+            const battleText = `⚡ INITIAL D BATTLE CHALLENGE ⚡\n🏎️ Rakip: @${opponent}\n📍 Harita: ${track}\n🚗 Sınıf: ${carClass}`;
+            socket.emit('chat message', { user: myUsername, text: battleText, isBattle: true, roomId: currentRoom });
+            closeBattleModal();
+        }
+
         function checkPin() {
             if (document.getElementById('pinInput').value === SECRET_PIN) {
                 unlockAudio(); document.getElementById('lockScreen').classList.add('hidden');
+                document.getElementById('sidebar').classList.remove('hidden');
                 
                 const savedUser = localStorage.getItem('project_tr_username');
                 if (savedUser) {
@@ -337,12 +479,14 @@
                 if(msg.pinned) pinnedMessages.set(msg._id, msg);
             });
             document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} üye`;
+            renderDmSidebar(Array.from(allKnownUsers));
             updatePinnedBar();
         });
 
         socket.on('active_users', (usersData) => {
             usersData.forEach(u => { allKnownUsers.add(u.username); if(u.avatar) knownProfiles[u.username] = u.avatar; });
             document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} üye`;
+            renderDmSidebar(Array.from(allKnownUsers));
             if (!document.getElementById('groupInfoOverlay').classList.contains('hidden')) renderParticipants();
         });
 
@@ -369,6 +513,7 @@
             if (!mentionDropdown.contains(e.target) && e.target !== messageInput) mentionDropdown.style.display = 'none';
             if (e.target === document.getElementById('groupInfoOverlay')) closeGroupInfo();
             if (e.target === document.getElementById('pinnedMessagesOverlay')) closePinnedModal();
+            if (e.target === document.getElementById('battleOverlay')) closeBattleModal();
             
             if (!e.target.classList.contains('msg-options-btn')) {
                 document.querySelectorAll('.msg-options-menu').forEach(menu => { menu.classList.remove('show-menu'); });
@@ -383,7 +528,8 @@
                 socket.emit('chat message', { 
                     user: myUsername, 
                     text: text,
-                    replyTo: currentReplyData 
+                    replyTo: currentReplyData,
+                    roomId: currentRoom
                 });
                 messageInput.value = '';
                 currentReplyData = null;
@@ -400,13 +546,12 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 
-                // Desteklenen en iyi ses formatını seç (Safari/Chrome uyumluluğu için)
                 let options = { mimeType: 'audio/webm' };
                 if (!MediaRecorder.isTypeSupported('audio/webm')) {
                     if (MediaRecorder.isTypeSupported('audio/mp4')) {
                         options = { mimeType: 'audio/mp4' };
                     } else {
-                        options = {}; // Tarayıcı kendi varsayılanını seçsin
+                        options = {};
                     }
                 }
 
@@ -427,7 +572,8 @@
                                 user: myUsername, 
                                 text: "🎙️ Sesli Mesaj",
                                 replyTo: currentReplyData,
-                                audioBase64: base64Audio 
+                                audioBase64: base64Audio,
+                                roomId: currentRoom
                             });
                             currentReplyData = null;
                             document.getElementById('replyPreview').classList.add('hidden');
@@ -465,7 +611,6 @@
         micBtn.addEventListener('touchstart', startRecording, {passive: false});
         micBtn.addEventListener('touchend', stopRecording, {passive: false});
 
-
         // 🗣️ KONUŞMAYI METNE ÇEVİRME (Speech-to-Text) ÖZELLİĞİ
         const sttBtn = document.getElementById('sttBtn');
         let recognition = null;
@@ -493,23 +638,12 @@
                 messageInput.focus();
             };
 
-            recognition.onspeechend = () => {
-                recognition.stop();
-            };
-
-            recognition.onerror = () => {
-                sttBtn.classList.remove('stt-active');
-                messageInput.placeholder = "Mesajını yaz veya @etiketle...";
-            };
-
-            recognition.onend = () => {
-                sttBtn.classList.remove('stt-active');
-                messageInput.placeholder = "Mesajını yaz veya @etiketle...";
-            };
+            recognition.onspeechend = () => { recognition.stop(); };
+            recognition.onerror = () => { sttBtn.classList.remove('stt-active'); messageInput.placeholder = "Mesajını yaz veya @etiketle..."; };
+            recognition.onend = () => { sttBtn.classList.remove('stt-active'); messageInput.placeholder = "Mesajını yaz veya @etiketle..."; };
         } else {
             sttBtn.onclick = () => { alert("Tarayıcın konuşmayı metne çevirme özelliğini desteklemiyor kanka."); };
         }
-
 
         socket.on('chat message', function(msg) {
             allKnownUsers.add(msg.user); 
@@ -627,6 +761,11 @@
                 formattedText = formattedText.replace(new RegExp(`@${myUsername}`, 'g'), `<span class="mention-tag">@${myUsername}</span>`);
             }
 
+            let battleCardHtml = '';
+            if(msg.isBattle) {
+                battleCardHtml = `<div class="battle-card"><strong style="color:#ffeb3b;">⚡ BATTLE CHALLENGE</strong><br><span style="font-size:12px;">${formattedText}</span></div>`;
+            }
+
             let audioHtml = '';
             if (msg.audioBase64) {
                 audioHtml = `<br><audio controls src="${msg.audioBase64}"></audio>`;
@@ -675,7 +814,7 @@
                             <span class="time" style="margin: 0; font-size: 10px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${optionsMenuHtml}</span>
                         </div>
                         ${replyHtml}
-                        <div style="line-height: 1.4; font-size: 14px;">${formattedText} ${audioHtml}</div>
+                        ${msg.isBattle ? battleCardHtml : `<div style="line-height: 1.4; font-size: 14px;">${formattedText} ${audioHtml}</div>`}
                     </div>
                     ${isOutgoing ? avatarHtml : ''}
                 </div>
