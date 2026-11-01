@@ -280,7 +280,7 @@
             currentGroupSettings = settings;
             document.getElementById('headerGroupIcon').src = settings.icon;
             document.getElementById('modalGroupIcon').src = settings.icon;
-            renderGroupsSidebar();
+            renderGroupsSidebar(); 
             if (!document.getElementById('groupInfoOverlay').classList.contains('hidden')) renderParticipants();
         });
 
@@ -394,6 +394,7 @@
                 if(u !== myUsername) {
                     const item = document.createElement('div');
                     item.className = 'nav-item';
+                    
                     const dmRoomId = 'dm_' + [myUsername, u].sort().join('_');
                     if (currentRoom === dmRoomId) item.classList.add('active');
 
@@ -450,4 +451,405 @@
                             myUsername = savedUser; 
                             document.getElementById('currentUserDisplay').textContent = myUsername;
                             document.getElementById('chatContainer').classList.remove('hidden'); 
-                            document.getElementById('messageInput').
+                            document.getElementById('messageInput').focus();
+                            switchRoom('global', '🌐 Project TR');
+                        } else {
+                            document.getElementById('nicknameScreen').classList.remove('hidden');
+                            document.getElementById('nicknameInput').focus();
+                        }
+                    });
+                } else { document.getElementById('nicknameScreen').classList.remove('hidden'); document.getElementById('nicknameInput').focus(); }
+            } else document.getElementById('errorMsg').style.display = 'block';
+        }
+
+        function setNickname() {
+            unlockAudio();
+            const enteredName = document.getElementById('nicknameInput').value.trim();
+            if (!enteredName) { document.getElementById('nickErrorMsg').textContent = "İsim boş bırakılamaz!"; document.getElementById('nickErrorMsg').style.display = 'block'; return; }
+            socket.emit('set-username', { username: enteredName, avatar: myAvatar }, (response) => {
+                if (response.success) {
+                    myUsername = enteredName; localStorage.setItem('project_tr_username', myUsername); localStorage.setItem('project_tr_nick_date', Date.now().toString());
+                    document.getElementById('currentUserDisplay').textContent = myUsername; document.getElementById('nicknameScreen').classList.add('hidden');
+                    document.getElementById('chatContainer').classList.remove('hidden'); document.getElementById('messageInput').focus();
+                    switchRoom('global', '🌐 Project TR');
+                } else { document.getElementById('nickErrorMsg').textContent = response.message; document.getElementById('nickErrorMsg').style.display = 'block'; }
+            });
+        }
+
+        function requestChangeNick() {
+            const lastSetDate = parseInt(localStorage.getItem('project_tr_nick_date') || '0');
+            if (Date.now() - lastSetDate < 1209600000) alert(`Kanka kullanıcı adını değiştirmek için 2 haftalık süren daha dolmadı!`);
+            else { if (confirm("Kullanıcı adını değiştirmek istiyor musun?")) { localStorage.removeItem('project_tr_username'); location.reload(); } }
+        }
+
+        function toggleNotifications() {
+            const btn = document.getElementById('notifBtn');
+            if (!notificationsEnabled) {
+                Notification.requestPermission().then(p => {
+                    if (p === "granted") { notificationsEnabled = true; btn.textContent = "🔕"; btn.classList.add('active'); }
+                });
+            } else { notificationsEnabled = false; btn.textContent = "🔔"; btn.classList.remove('active'); }
+        }
+
+        document.getElementById('cancelReply').addEventListener('click', () => {
+            currentReplyData = null;
+            document.getElementById('replyPreview').classList.add('hidden');
+        });
+
+        document.getElementById('pinInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPin(); });
+        document.getElementById('nicknameInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') setNickname(); });
+
+        const form = document.getElementById('form');
+        const messageInput = document.getElementById('messageInput');
+        const chat = document.getElementById('chat');
+        const mentionDropdown = document.getElementById('mentionDropdown');
+
+        socket.on('room_history', (messages) => {
+            chat.innerHTML = '';
+            pinnedMessages.clear();
+            messages.forEach(msg => {
+                allKnownUsers.add(msg.user);
+                if(msg.avatar) knownProfiles[msg.user] = msg.avatar;
+                displayMessage(msg);
+                if(msg.pinned) pinnedMessages.set(msg._id, msg);
+            });
+            document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} Üye`;
+            renderDmSidebar(Array.from(allKnownUsers));
+            updatePinnedBar();
+        });
+
+        socket.on('active_users', (usersData) => {
+            usersData.forEach(u => { allKnownUsers.add(u.username); if(u.avatar) knownProfiles[u.username] = u.avatar; });
+            document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} Üye`;
+            renderDmSidebar(Array.from(allKnownUsers));
+            if (!document.getElementById('groupInfoOverlay').classList.contains('hidden')) renderParticipants();
+        });
+
+        messageInput.addEventListener('input', function() {
+            const val = this.value; const match = val.substring(0, this.selectionStart).match(/(?:^|\s)@(\w*)$/);
+            if (match) {
+                const query = match[1].toLowerCase();
+                const filteredUsers = Array.from(allKnownUsers).filter(u => u.toLowerCase().includes(query) && u !== myUsername);
+                if (filteredUsers.length > 0) {
+                    mentionDropdown.innerHTML = '';
+                    filteredUsers.forEach(user => {
+                        const item = document.createElement('div'); item.className = 'mention-item';
+                        item.innerHTML = `<div style="display:flex; align-items:center; gap:10px;">${getAvatarHtml(user, 26)} <div>${user}</div></div>`;
+                        item.onclick = function() {
+                            messageInput.value = `${val.substring(0, val.lastIndexOf('@'))}@${user} ${val.substring(messageInput.selectionStart)}`;
+                            mentionDropdown.style.display = 'none'; messageInput.focus();
+                        }; mentionDropdown.appendChild(item);
+                    }); mentionDropdown.style.display = 'flex';
+                } else mentionDropdown.style.display = 'none';
+            } else mentionDropdown.style.display = 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!mentionDropdown.contains(e.target) && e.target !== messageInput) mentionDropdown.style.display = 'none';
+            if (e.target === document.getElementById('groupInfoOverlay')) closeGroupInfo();
+            if (e.target === document.getElementById('pinnedMessagesOverlay')) closePinnedModal();
+            if (e.target === document.getElementById('battleOverlay')) closeBattleModal();
+            
+            if (!e.target.classList.contains('msg-options-btn')) {
+                document.querySelectorAll('.msg-options-menu').forEach(menu => { menu.classList.remove('show-menu'); });
+            }
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            mentionDropdown.style.display = 'none';
+            const text = messageInput.value.trim();
+            if (text && myUsername) {
+                socket.emit('chat message', { 
+                    user: myUsername, 
+                    text: text,
+                    replyTo: currentReplyData,
+                    roomId: currentRoom
+                });
+                messageInput.value = '';
+                currentReplyData = null;
+                document.getElementById('replyPreview').classList.add('hidden');
+            }
+        });
+
+        const micBtn = document.getElementById('micBtn');
+
+        async function startRecording(e) {
+            e.preventDefault();
+            if (isRecording) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                let options = { mimeType: 'audio/webm' };
+                if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
+                    else options = {};
+                }
+                mediaRecorder = new MediaRecorder(stream, options);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                    if (audioBlob.size > 500) {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result;
+                            socket.emit('chat message', { 
+                                user: myUsername, 
+                                text: "🎙️ Sesli Mesaj",
+                                replyTo: currentReplyData,
+                                audioBase64: base64Audio,
+                                roomId: currentRoom
+                            });
+                            currentReplyData = null;
+                            document.getElementById('replyPreview').classList.add('hidden');
+                        };
+                    }
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                micBtn.classList.add('recording-pulse');
+                messageInput.placeholder = "🔴 Ses kaydediliyor... Bırakınca gönderir.";
+                messageInput.disabled = true;
+            } catch (err) {
+                alert("Mikrofona erişilemedi! Lütfen tarayıcı izinlerini kontrol et.");
+            }
+        }
+
+        function stopRecording(e) {
+            e.preventDefault();
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                micBtn.classList.remove('recording-pulse');
+                messageInput.placeholder = "Mesajını yaz veya @etiketle...";
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        micBtn.addEventListener('mousedown', startRecording);
+        micBtn.addEventListener('mouseup', stopRecording);
+        micBtn.addEventListener('mouseleave', stopRecording);
+        micBtn.addEventListener('touchstart', startRecording, {passive: false});
+        micBtn.addEventListener('touchend', stopRecording, {passive: false});
+
+        const sttBtn = document.getElementById('sttBtn');
+        let recognition = null;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'tr-TR';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            sttBtn.onclick = () => { try { recognition.start(); sttBtn.classList.add('stt-active'); messageInput.placeholder = "🗣️ Dinleniyor, konuşmaya başla..."; } catch(err) { recognition.stop(); } };
+            recognition.onresult = (event) => { const speechResult = event.results[0][0].transcript; messageInput.value = messageInput.value ? messageInput.value + " " + speechResult : speechResult; messageInput.focus(); };
+            recognition.onspeechend = () => { recognition.stop(); };
+            recognition.onerror = () => { sttBtn.classList.remove('stt-active'); messageInput.placeholder = "Mesajını yaz veya @etiketle..."; };
+            recognition.onend = () => { sttBtn.classList.remove('stt-active'); messageInput.placeholder = "Mesajını yaz veya @etiketle..."; };
+        } else {
+            sttBtn.onclick = () => { alert("Tarayıcın konuşmayı metne çevirme özelliğini desteklemiyor kanka."); };
+        }
+
+        socket.on('chat message', function(msg) {
+            allKnownUsers.add(msg.user); 
+            if(msg.avatar) knownProfiles[msg.user] = msg.avatar;
+            
+            if (msg.roomId === currentRoom) {
+                displayMessage(msg);
+                document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} Üye`;
+            }
+            
+            if (msg.user !== myUsername) {
+                const isMentioned = myUsername && msg.text.includes(`@${myUsername}`);
+                const isReplied = msg.replyTo && msg.replyTo.user === myUsername;
+
+                if (isMentioned || isReplied || msg.roomId.startsWith('dm_')) {
+                    mentionSound.currentTime = 0; mentionSound.play().catch(()=>{});
+                    try { if (Notification.permission === "granted") new Notification(`Sana özel bir mesaj var!`, { body: `${msg.user}: ${msg.text}` }); } catch(e) {}
+                } else if (notificationsEnabled && msg.roomId === currentRoom) { 
+                    standardSound.currentTime = 0; standardSound.play().catch(()=>{});
+                    try { if (Notification.permission === "granted") new Notification(`Yeni mesaj: ${msg.user}`, { body: msg.text }); } catch(e) {}
+                }
+            }
+        });
+
+        socket.on('pinned_updated', (updatedMsg) => {
+            if (updatedMsg.roomId === currentRoom) {
+                const msgEl = document.getElementById('msg-' + updatedMsg._id);
+                if (updatedMsg.pinned) {
+                    pinnedMessages.set(updatedMsg._id, updatedMsg);
+                    if(msgEl) msgEl.classList.add('is-pinned');
+                } else {
+                    pinnedMessages.delete(updatedMsg._id);
+                    if(msgEl) msgEl.classList.remove('is-pinned');
+                }
+                updatePinnedBar();
+                if(!document.getElementById('pinnedMessagesOverlay').classList.contains('hidden')) { openPinnedModal(); }
+            }
+        });
+
+        function togglePin(msgId) { socket.emit('toggle_pin', msgId); }
+
+        function updatePinnedBar() {
+            const bar = document.getElementById('pinnedBar');
+            const content = document.getElementById('pinnedContent');
+            if (pinnedMessages.size > 0) {
+                bar.classList.remove('hidden');
+                if (pinnedMessages.size === 1) {
+                    const lastPinned = Array.from(pinnedMessages.values())[0];
+                    content.innerHTML = `<div style="font-weight: bold; color: #ffeb3b; font-size: 11px; margin-bottom: 2px;">📌 Sabitlenmiş Mesaj</div><div style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(lastPinned.user)}: ${escapeHtml(lastPinned.text)}</div>`;
+                } else {
+                    content.innerHTML = `<div style="font-weight: bold; color: #ffeb3b; font-size: 11px; margin-bottom: 2px;">📌 ${pinnedMessages.size} Sabitlenmiş Mesaj</div><div style="font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mesajları görmek ve yönetmek için tıkla</div>`;
+                }
+            } else { bar.classList.add('hidden'); }
+        }
+
+        function openPinnedModal() {
+            const list = document.getElementById('pinnedMessagesList');
+            list.innerHTML = '';
+            const amIAdmin = currentGroupSettings.admins.includes(myUsername);
+
+            if (pinnedMessages.size === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#aaa; font-size:13px;">Sabitlenmiş mesaj yok.</p>';
+            } else {
+                const pins = Array.from(pinnedMessages.values()).reverse(); 
+                pins.forEach(msg => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; border-left: 4px solid #ffeb3b;';
+                    const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    let html = `<div style="display: flex; justify-content: space-between; margin-bottom: 5px;"><strong style="color: #00f2fe; font-size: 12px;">${escapeHtml(msg.user)}</strong><span style="font-size: 10px; color: #aaa;">${timeStr}</span></div>`;
+                    
+                    if (msg.audioBase64) {
+                        html += `<audio controls style="max-width:100%; height:30px; margin-bottom:10px;" src="${msg.audioBase64}"></audio>`;
+                    } else {
+                        html += `<div style="font-size: 13px; color: #fff; margin-bottom: 10px; word-break: break-word;">${escapeHtml(msg.text)}</div>`;
+                    }
+                    
+                    html += `<div style="display: flex; justify-content: flex-end; gap: 8px;"><button class="aero-btn" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="closePinnedModal(); scrollToMessage('${msg._id}')">Mesaja Git</button>`;
+                    if (amIAdmin) { html += `<button style="background: rgba(255, 71, 87, 0.8); color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;" onclick="togglePin('${msg._id}')">Sabiti Kaldır</button>`; }
+                    html += `</div>`;
+                    
+                    item.innerHTML = html;
+                    list.appendChild(item);
+                });
+            }
+            document.getElementById('pinnedMessagesOverlay').classList.remove('hidden');
+        }
+
+        function closePinnedModal() { document.getElementById('pinnedMessagesOverlay').classList.add('hidden'); }
+
+        function scrollToMessage(id) {
+            const el = document.getElementById('msg-' + id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.background = 'rgba(255, 235, 59, 0.4)';
+                setTimeout(() => { el.style.background = ''; }, 1500);
+            }
+        }
+
+        function toggleMsgOptions(btn, event) {
+            event.stopPropagation();
+            document.querySelectorAll('.msg-options-menu').forEach(menu => { if (menu !== btn.nextElementSibling) menu.classList.remove('show-menu'); });
+            const menu = btn.nextElementSibling;
+            menu.classList.toggle('show-menu');
+        }
+
+        function displayMessage(msg) {
+            const row = document.createElement('div');
+            const isOutgoing = msg.user === myUsername;
+            row.className = `message-row ${isOutgoing ? 'outgoing' : 'incoming'}`;
+
+            const item = document.createElement('div');
+            item.className = 'message';
+            if(msg._id) item.id = 'msg-' + msg._id; 
+            if(msg.pinned) item.classList.add('is-pinned');
+            
+            let formattedText = escapeHtml(msg.text);
+            if (myUsername && msg.text.includes(`@${myUsername}`)) {
+                item.classList.add('mentioned');
+                formattedText = formattedText.replace(new RegExp(`@${myUsername}`, 'g'), `<span class="mention-tag">@${myUsername}</span>`);
+            }
+
+            let battleCardHtml = '';
+            if(msg.isBattle) {
+                battleCardHtml = `<div class="battle-card"><strong style="color:#ffeb3b;">⚡ BATTLE CHALLENGE</strong><br><span style="font-size:12px;">${formattedText}</span></div>`;
+            }
+
+            let audioHtml = '';
+            if (msg.audioBase64) {
+                audioHtml = `<br><audio controls src="${msg.audioBase64}"></audio>`;
+            }
+
+            let replyHtml = '';
+            if (msg.replyTo && msg.replyTo.text) {
+                replyHtml = `
+                    <div class="quoted-box">
+                        <div class="q-user">${escapeHtml(msg.replyTo.user)}</div>
+                        <div style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">${escapeHtml(msg.replyTo.text)}</div>
+                    </div>
+                `;
+            }
+
+            const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const amIAdmin = currentGroupSettings.admins.includes(myUsername);
+            
+            const replyAction = `<button type="button" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${msg.audioBase64 ? '🎙️ Sesli Mesaj' : escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬 Yanıtla</button>`;
+            const pinAction = amIAdmin && msg._id ? `<button type="button" onclick="togglePin('${msg._id}')">${msg.pinned ? '📍 Sabiti Kaldır' : '📌 Sabitle'}</button>` : '';
+            
+            const optionsMenuHtml = `
+                <div class="msg-options-container">
+                    <button class="msg-options-btn" onclick="toggleMsgOptions(this, event)">⋮</button>
+                    <div class="msg-options-menu">
+                        ${replyAction}
+                        ${pinAction}
+                    </div>
+                </div>
+            `;
+
+            const userAvatar = msg.avatar || knownProfiles[msg.user];
+            let avatarHtml = '';
+            if (userAvatar) {
+                avatarHtml = `<img src="${escapeHtml(userAvatar)}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">`;
+            } else {
+                avatarHtml = `<div style="width: 32px; height: 32px; border-radius: 50%; background: #00b4d8; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;">${msg.user.charAt(0).toUpperCase()}</div>`;
+            }
+
+            item.innerHTML = `
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                    ${!isOutgoing ? avatarHtml : ''}
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 15px;">
+                            <span class="username" style="margin: 0; font-weight: bold; font-size: 12px; color: #d1f8ff;">${escapeHtml(msg.user)}</span>
+                            <span class="time" style="margin: 0; font-size: 10px; opacity: 0.8; display: flex; align-items: center;">${timeStr} ${optionsMenuHtml}</span>
+                        </div>
+                        ${replyHtml}
+                        ${msg.isBattle ? battleCardHtml : `<div style="line-height: 1.4; font-size: 14px;">${formattedText} ${audioHtml}</div>`}
+                    </div>
+                    ${isOutgoing ? avatarHtml : ''}
+                </div>
+            `;
+            
+            row.appendChild(item);
+            chat.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function prepareReply(user, msgId, text) {
+            currentReplyData = { user: user, text: text };
+            document.getElementById('replyingToUser').textContent = user;
+            document.getElementById('replyingToText').textContent = text;
+            document.getElementById('replyPreview').classList.remove('hidden');
+            document.getElementById('messageInput').focus();
+            document.querySelectorAll('.msg-options-menu').forEach(menu => menu.classList.remove('show-menu'));
+        }
+
+        function escapeHtml(text) { 
+            if (!text) return '';
+            return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
+        }
+    </script>
+</body>
+</html>
