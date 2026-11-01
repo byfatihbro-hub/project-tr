@@ -7,10 +7,22 @@
     <style>
         * { box-sizing: border-box; }
         body { background: linear-gradient(135deg, #1a73e8 0%, #00b4d8 50%, #90e0ef 100%); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; justify-content: center; align-items: center; }
-        .app-container { width: 100%; height: 100%; display: flex; flex-direction: row; padding: 10px; background: transparent; position: relative; gap: 10px; }
+        
+        /* ❄️ Kar yağışı canvas katmanı (Arka planı bozmaz, üstünde süzülür) */
+        #snowCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .app-container { width: 100%; height: 100%; display: flex; flex-direction: row; padding: 10px; background: transparent; position: relative; gap: 10px; z-index: 2; }
         @media (min-width: 768px) { .app-container { max-width: 1050px; max-height: 85vh; height: 85vh; border-radius: 16px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(18, 18, 18, 0.4); backdrop-filter: blur(16px); padding: 15px; } }
         .hidden { display: none !important; }
-        .glass-box { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37); border-radius: 12px; padding: 15px; }
+        .glass-box { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(0, 30, 60, 0.37); border-radius: 12px; padding: 15px; z-index: 2; }
         .center-screen { position: absolute; width: 90%; max-width: 400px; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; text-align: center; z-index: 100; }
         .center-screen input, .center-screen button { padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.5); background: rgba(0, 0, 0, 0.3); color: #fff; width: 220px; text-align: center; outline: none; }
         .aero-btn { background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); border: 1px solid #ffffff; color: #fff; font-weight: bold; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 5px rgba(0,0,0,0.2); text-shadow: 0 1px 1px rgba(0,0,0,0.3); transition: 0.2s; }
@@ -23,7 +35,7 @@
         .nav-item:hover, .nav-item.active { background: rgba(0, 242, 254, 0.3); border-color: #00f2fe; font-weight: bold; }
         .user-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
         
-        #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; position: relative; }
+        #chatContainer { display: flex; flex-direction: column; flex: 1; height: 100%; overflow: hidden; position: relative; z-index: 2; }
         .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 5px; cursor: pointer; border-radius: 8px; transition: background 0.2s; }
         .chat-header:hover { background: rgba(255,255,255,0.1); }
         .header-buttons { display: flex; gap: 6px; }
@@ -89,6 +101,9 @@
     </style>
 </head>
 <body>
+    <!-- ❄️ Kar Yağışı Canvas Arka Planı -->
+    <canvas id="snowCanvas"></canvas>
+
     <div class="app-container">
         
         <div id="sidebar" class="glass-box hidden">
@@ -236,6 +251,65 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // ❄️ Kar Yağdırma Efekti Motoru
+        const snowCanvas = document.getElementById('snowCanvas');
+        const snowCtx = snowCanvas.getContext('2d');
+
+        function resizeSnowCanvas() {
+            snowCanvas.width = window.innerWidth;
+            snowCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeSnowCanvas);
+        resizeSnowCanvas();
+
+        const snowflakes = [];
+        const maxSnowflakes = 60;
+
+        for (let i = 0; i < maxSnowflakes; i++) {
+            snowflakes.push({
+                x: Math.random() * snowCanvas.width,
+                y: Math.random() * snowCanvas.height,
+                radius: Math.random() * 2.5 + 1,
+                density: Math.random() * maxSnowflakes,
+                speed: Math.random() * 0.5 + 0.5
+            });
+        }
+
+        function drawSnow() {
+            snowCtx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+            snowCtx.fillStyle = "rgba(255, 255, 255, 0.7)";
+            snowCtx.beginPath();
+            for (let i = 0; i < snowflakes.length; i++) {
+                let f = snowflakes[i];
+                snowCtx.moveTo(f.x, f.y);
+                snowCtx.arc(f.x, f.y, f.radius, 0, Math.PI * 2, true);
+            }
+            snowCtx.fill();
+            updateSnow();
+        }
+
+        let snowAngle = 0;
+        function updateSnow() {
+            snowAngle += 0.01;
+            for (let i = 0; i < snowflakes.length; i++) {
+                let f = snowflakes[i];
+                f.y += f.speed;
+                f.x += Math.sin(snowAngle + f.density) * 0.5;
+
+                if (f.y > snowCanvas.height + 5) {
+                    snowflakes[i] = {
+                        x: Math.random() * snowCanvas.width,
+                        y: -10,
+                        radius: f.radius,
+                        density: f.density,
+                        speed: f.speed
+                    };
+                }
+            }
+        }
+        setInterval(drawSnow, 33);
+
+        // --- UYGULAMA KODLARI ---
         const SECRET_PIN = "1992";
         
         let myUsername = localStorage.getItem('project_tr_username') || ''; 
