@@ -515,7 +515,11 @@
         });
 
         socket.on('active_users', (usersData) => {
-            usersData.forEach(u => { allKnownUsers.add(u.username); if(u.avatar) knownProfiles[u.username] = u.avatar; });
+            allKnownUsers.clear(); 
+            usersData.forEach(u => { 
+                allKnownUsers.add(u.username); 
+                if(u.avatar) knownProfiles[u.username] = u.avatar; 
+            });
             document.getElementById('headerUserCount').textContent = `${allKnownUsers.size} Üye`;
             renderDmSidebar(Array.from(allKnownUsers));
             if (!document.getElementById('groupInfoOverlay').classList.contains('hidden')) renderParticipants();
@@ -686,7 +690,6 @@
             }
         });
 
-        // 🗑️ MESAJ SİLME ÖN YÜZ DİNLEYİCİSİ
         socket.on('message_deleted', (msgId) => {
             const msgEl = document.getElementById('msg-' + msgId);
             if (msgEl) {
