@@ -106,14 +106,10 @@
                 <span>Özel Gruplar</span>
                 <button onclick="createNewGroup()" style="background: none; border: none; color: #ffeb3b; cursor: pointer; font-weight: bold; font-size:16px;" title="Yeni Grup Kur">+</button>
             </div>
-            <div id="groupsSidebarList">
-                <!-- Kalıcı gruplar buraya gelecek -->
-            </div>
+            <div id="groupsSidebarList"></div>
 
             <div class="sidebar-title">Özel Mesajlar (DM)</div>
-            <div id="dmSidebarList">
-                <!-- Çevrimiçi kullanıcılar JS ile buraya yüklenecek -->
-            </div>
+            <div id="dmSidebarList"></div>
         </div>
 
         <div id="lockScreen" class="glass-box center-screen">
@@ -690,6 +686,25 @@
             }
         });
 
+        // 🗑️ MESAJ SİLME ÖN YÜZ DİNLEYİCİSİ
+        socket.on('message_deleted', (msgId) => {
+            const msgEl = document.getElementById('msg-' + msgId);
+            if (msgEl) {
+                const row = msgEl.closest('.message-row');
+                if (row) row.remove();
+            }
+            if (pinnedMessages.has(msgId)) {
+                pinnedMessages.delete(msgId);
+                updatePinnedBar();
+            }
+        });
+
+        function deleteMessage(msgId) {
+            if (confirm("Bu mesajı kalıcı olarak silmek istediğine emin misin?")) {
+                socket.emit('delete_message', msgId);
+            }
+        }
+
         function togglePin(msgId) { socket.emit('toggle_pin', msgId); }
 
         function updatePinnedBar() {
@@ -798,6 +813,7 @@
             
             const replyAction = `<button type="button" onclick="prepareReply('${escapeHtml(msg.user).replace(/'/g, "\\'")}', ${msg._id ? `'${msg._id}'` : 'null'}, '${msg.audioBase64 ? '🎙️ Sesli Mesaj' : escapeHtml(msg.text).replace(/'/g, "\\'")}')">💬 Yanıtla</button>`;
             const pinAction = amIAdmin && msg._id ? `<button type="button" onclick="togglePin('${msg._id}')">${msg.pinned ? '📍 Sabiti Kaldır' : '📌 Sabitle'}</button>` : '';
+            const deleteAction = amIAdmin && msg._id ? `<button type="button" onclick="deleteMessage('${msg._id}')" style="color: #ff4757; font-weight: bold;">🗑️ Mesajı Sil</button>` : '';
             
             const optionsMenuHtml = `
                 <div class="msg-options-container">
@@ -805,6 +821,7 @@
                     <div class="msg-options-menu">
                         ${replyAction}
                         ${pinAction}
+                        ${deleteAction}
                     </div>
                 </div>
             `;
